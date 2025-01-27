@@ -26,7 +26,8 @@ export default function Login() {
     } else {
       localStorage.setItem("token", data.token);
       setToken(data.token);
-      navigate("/");
+      // Redirect to Posts page after login
+      navigate("/posts");
     }
   }
   return (

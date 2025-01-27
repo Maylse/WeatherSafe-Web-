@@ -28,7 +28,7 @@ export default function Register() {
     } else {
       localStorage.setItem("token", data.token);
       setToken(data.token);
-      navigate("/");
+      navigate("/posts");
     }
   }
   return (

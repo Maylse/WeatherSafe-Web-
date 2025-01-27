@@ -30,19 +30,12 @@ export default function Layout() {
     <>
       <header>
         <nav>
-          <Link to="/" className="nav-link">
-            Home
-          </Link>
-
           {user ? (
             <div className="flex items-center space-x-4">
               <p className="text-slate-400 text-xs">
                 {" "}
-                Welcome back {user.name}
+                Welcome back {user.name}{" "}
               </p>
-              <Link to="/create" className="nav-link">
-                New Post
-              </Link>
               <form onSubmit={handleLogout}>
                 <button className="nav-link">Logout</button>
               </form>
@@ -59,9 +52,43 @@ export default function Layout() {
           )}
         </nav>
       </header>
-      <main>
-        <Outlet />
-      </main>
+
+      <div className="flex h-screen">
+        {user && (
+          <aside className="w-64 bg-slate-800 text-slate-200 p-4">
+            <ul>
+              <li>
+                <Link
+                  to="/posts"
+                  className="block px-4 py-2 rounded-md hover:bg-slate-700"
+                >
+                  Posts
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/brgy-admins"
+                  className="block px-4 py-2 rounded-md hover:bg-slate-700"
+                >
+                  Barangay Admins
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/barangays"
+                  className="block px-4 py-2 rounded-md hover:bg-slate-700"
+                >
+                  Barangay
+                </Link>
+              </li>
+            </ul>
+          </aside>
+        )}
+
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
     </>
   );
 }
