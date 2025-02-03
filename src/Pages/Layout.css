@@ -1,0 +1,97 @@
+/* Header Styling */
+.header {
+    background-color: #1e293b; /* Dark blue */
+    color: white;
+    padding: 0 20px;
+    display: flex;
+    justify-content: flex-end; /* Align content to the right */
+    align-items: center;
+    height: 50px;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 100;
+  }
+  
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Add spacing between elements */
+  }
+  
+  .welcome-text {
+    font-size: 0.875rem;
+    color: #94a3b8; /* Slate color */
+  }
+  
+  .logout-btn {
+    background: none;
+    border: none;
+    color: #60a5fa; /* Blue */
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+  
+  .logout-btn:hover {
+    color: #3b82f6; /* Darker blue on hover */
+  }
+  
+  .header-links {
+    display: flex;
+    gap: 10px; /* Add spacing between links */
+  }
+  
+  .nav-link {
+    color: #60a5fa; /* Blue */
+    text-decoration: none;
+  }
+  
+  .nav-link:hover {
+    color: #3b82f6; /* Darker blue on hover */
+  }
+  
+  /* Sidebar Styling */
+  .sidebar {
+    width: 250px;
+    background-color: #003366; /* Dark blue background */
+    color: white;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 10px;
+  }
+  
+  .logo-container {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .logo {
+    width: 200px; /* Adjust logo size */
+    height: auto;
+  }
+  
+  .menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+  
+  .menu-item {
+    display: block;
+    padding: 10px 15px;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    text-align: left;
+    font-size: 1rem;
+    margin-bottom: 5px;
+  }
+  
+  .menu-item:hover {
+    background-color: #00509e; /* Light blue on hover */
+  }
+  
+  

@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import logo from "./logo.png";
 import "./Login.css";
@@ -28,7 +28,7 @@ export default function Login() {
     } else {
       localStorage.setItem("token", data.token);
       setToken(data.token);
-      navigate("/");
+      navigate("/posts"); // Redirect to Posts page after login
     }
   }
 
@@ -42,8 +42,8 @@ export default function Login() {
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
             <input
-              type="text"
-              placeholder="Username"
+              type="email"
+              placeholder="email"
               value={formData.email}
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
@@ -68,6 +68,12 @@ export default function Login() {
             Login
           </button>
         </form>
+        <div className="additional-links">
+        <p>No account yet?</p>
+          <Link to="/register" className="register-link">
+            Register
+          </Link>
+        </div>
       </div>
     </div>
   );

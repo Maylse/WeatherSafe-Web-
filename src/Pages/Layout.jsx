@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
+import logo from "./Auth/logo.png";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -26,42 +27,68 @@ export default function Layout() {
       navigate("/");
     }
   }
-  return (
-    <>
-      <header>
-        <nav>
-          <Link to="/" className="nav-link">
-            Home
-          </Link>
 
-          {user ? (
-            <div className="flex items-center space-x-4">
-              <p className="text-slate-400 text-xs">
-                {" "}
-                Welcome back {user.name}
-              </p>
-              <Link to="/create" className="nav-link">
-                New Post
-              </Link>
-              <form onSubmit={handleLogout}>
-                <button className="nav-link">Logout</button>
-              </form>
-            </div>
-          ) : (
-            <div className="space-x-4">
-              <Link to="/register" className="nav-link">
-                Register
-              </Link>
-              <Link to="/login" className="nav-link">
-                Login
-              </Link>
-            </div>
-          )}
-        </nav>
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 text-white">
+        <div></div>
+        {user && (
+          <div className="flex items-center space-x-4">
+            <p className="text-white text-xs">Welcome back {user.name}</p>
+            <form onSubmit={handleLogout}>
+              <button className="nav-link">Logout</button>
+            </form>
+          </div>
+        )}
       </header>
-      <main>
-        <Outlet />
-      </main>
-    </>
+
+      {/* Main Layout */}
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        {user && (
+          <aside className="w-64 bg-blue-900 text-white p-4 pt-10">
+            <div className="mb-6">
+              <img
+                src={logo}
+                alt="WeatherSafe Logo"
+                className="mx-auto w-32 mb-6"
+              />
+            </div>
+            <ul className="space-y-4">
+              <li>
+                <Link
+                  to="/posts"
+                  className="block px-4 py-2 rounded hover:bg-blue-700 transition"
+                >
+                  Posts
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/brgy-admins"
+                  className="block px-4 py-2 rounded hover:bg-blue-700 transition"
+                >
+                  Barangay Admins
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/barangays"
+                  className="block px-4 py-2 rounded hover:bg-blue-700 transition"
+                >
+                  Barangay
+                </Link>
+              </li>
+            </ul>
+          </aside>
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }

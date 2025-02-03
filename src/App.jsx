@@ -1,32 +1,27 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Layout from "./Pages/Layout";
-import Home from "./Pages/Home";
 import Register from "./Pages/Auth/Register";
 import Login from "./Pages/Auth/Login";
 import { useContext } from "react";
 import { AppContext } from "./Context/AppContext";
-import Create from "./Pages/Posts/Create";
-import Show from "./Pages/Posts/Show";
-import Update from "./Pages/Posts/Update";
+import Posts from "./Pages/Posts/Posts";
+import BrgyAdmins from "./Pages/BrgyAdmins/BrgyAdmins";
+import Barangays from "./Pages/Barangays/Barangays";
 
 export default function App() {
   const { user } = useContext(AppContext);
+
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-
-          <Route path="/register" element={user ? <Home /> : <Register />} />
-          <Route path="/login" element={user ? <Home /> : <Login />} />
-          <Route path="/create" element={user ? <Create /> : <Login />} />
-
-          <Route path="/posts/:id" element={<Show />} />
-          <Route
-            path="/posts/update/:id"
-            element={user ? <Update /> : <Login />}
-          />
+          <Route index element={user ? <Posts /> : <Login />} />
+          <Route path="/register" element={user ? <Posts /> : <Register />} />
+          <Route path="/login" element={user ? <Posts /> : <Login />} />
+          <Route path="/posts" element={user ? <Posts /> : <Login />} />
+          <Route path="/brgy-admins" element={user ? <BrgyAdmins /> : <Login />} />
+          <Route path="/barangays" element={user ? <Barangays /> : <Login />} /> 
         </Route>
       </Routes>
     </BrowserRouter>

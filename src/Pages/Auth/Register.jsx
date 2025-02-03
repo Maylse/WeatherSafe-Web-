@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import "./Register.css";
 
@@ -21,6 +21,9 @@ export default function Register() {
     const res = await fetch("/api/register", {
       method: "post",
       body: JSON.stringify(formData),
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
 
     const data = await res.json();
@@ -29,7 +32,7 @@ export default function Register() {
     } else {
       localStorage.setItem("token", data.token);
       setToken(data.token);
-      navigate("/");
+      navigate("/posts");
     }
   }
 
@@ -92,6 +95,13 @@ export default function Register() {
             Register
           </button>
         </form>
+        {/* Login Button */}
+        <div className="login-link">
+          <p>Already have an account?</p>
+          <Link to="/login" className="secondary-btn">
+            Login
+          </Link>
+        </div>
       </div>
     </div>
   );

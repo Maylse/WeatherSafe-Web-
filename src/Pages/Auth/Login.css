@@ -8,25 +8,23 @@ html, body {
 }
 
 body {
+    margin: 0;
+    padding: 0;
+    height: 100vh; /* Ensures the gradient covers the full viewport height */
+    width: 100%;
+    font-family: Arial, sans-serif;
     background: linear-gradient(to bottom, #87ceeb, #1e90ff);
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* Ensures the gradient doesn't scroll */
     display: flex;
     flex-direction: column;
-}
-
-/* Header Styling */
-header {
-    background: #0c1e38;
-    color: white;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 header nav {
     width: 100%;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end; /* Aligns content to the right */
+    align-items: center;
 }
 
 header nav ul {
@@ -34,28 +32,24 @@ header nav ul {
     margin: 0;
     padding: 0;
     display: flex;
-}
-
-header nav ul.left {
-    justify-content: flex-start;
-}
-
-header nav ul.right {
-    justify-content: flex-end;
-    gap: 15px;
+    gap: 15px; /* Adds spacing between the buttons */
 }
 
 header nav ul li {
-    margin: 0 10px;
+    margin: 0;
 }
 
 header nav ul li a {
     color: white;
     text-decoration: none;
+    padding: 10px 15px; /* Adds padding for better spacing */
+    border-radius: 4px; /* Optional: adds rounded corners */
+    background-color: transparent; /* Optional: remove background if unwanted */
+    transition: background-color 0.3s ease;
 }
 
 header nav ul li a:hover {
-    text-decoration: underline;
+    background-color: rgba(255, 255, 255, 0.2); /* Adds a hover effect */
 }
 
 /* Login Page Styling */
@@ -66,7 +60,7 @@ header nav ul li a:hover {
     justify-content: flex-start;
     flex: 1;
     text-align: center;
-    margin-top: 50px; /* Add space below the header */
+    margin-top: 70px; /* Add space below the header */
 }
 
 /* Logo Container Styling */
@@ -132,3 +126,4 @@ header nav ul li a:hover {
     text-align: left;
     margin-top: 5px;
 }
+
