@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { AppContext } from "../../Context/AppContext";
+import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
 import "./Post.css";
 

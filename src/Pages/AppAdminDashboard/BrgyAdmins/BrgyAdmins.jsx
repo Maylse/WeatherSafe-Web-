@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppContext } from "../../Context/AppContext";
+import { AppContext } from "../../../Context/AppContext";
 
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
