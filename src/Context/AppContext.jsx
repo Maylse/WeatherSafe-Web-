@@ -4,10 +4,11 @@ export const AppContext = createContext();
 
 export default function AppProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token"));
-
   const [user, setUser] = useState(null);
 
   async function getUser() {
+    if (!token) return;
+
     const res = await fetch("/api/user", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -16,14 +17,14 @@ export default function AppProvider({ children }) {
     const data = await res.json();
 
     if (res.ok) {
-      setUser(data);
+      setUser(data); // Ensure data contains userType
+    } else {
+      setUser(null);
     }
   }
 
   useEffect(() => {
-    if (token) {
-      getUser();
-    }
+    getUser();
   }, [token]);
 
   return (

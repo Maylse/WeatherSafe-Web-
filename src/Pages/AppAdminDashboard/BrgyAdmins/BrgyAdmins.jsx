@@ -5,6 +5,10 @@ import { AppContext } from "../../../Context/AppContext";
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [brgyAdminToDelete, setBrgyAdminToDelete] = useState(null);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [brgyAdminToRestore, setBrgyAdminToRestore] = useState(null);
   const [selectedBrgyAdmin, setSelectedBrgyAdmin] = useState(null);
   const { user, token, setUser, setToken } = useContext(AppContext);
   const [brgyAdmins, setBrgyAdmins] = useState([]);
@@ -29,7 +33,6 @@ export default function BrgyAdmins() {
       const data = await res.json();
 
       if (res.ok) {
-        console.log("API response:", data); // Log the response to verify the structure
         setBrgyAdmins(data.barangay_admins || []); // Default to empty array if data is undefined
       } else {
         setErrors([data.message || "Failed to load Barangay Admins"]);
@@ -86,9 +89,6 @@ export default function BrgyAdmins() {
       if (res.ok) {
         // Refetch the list of Barangay Admins to ensure the table is up-to-date
         await getBrgyAdmins();
-
-        // Close modal and reset form
-        navigate("/brgy-admins");
         setIsModalOpen(false);
         setSelectedBrgyAdmin(null);
         setFormData({
@@ -119,33 +119,78 @@ export default function BrgyAdmins() {
     }); // Reset form data
   };
 
-  // Handle delete operation
-  const handleDelete = async (brgyAdminId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this admin?"
-    );
-    if (!confirmed) return;
+  const handleDelete = (brgyAdmin) => {
+    setBrgyAdminToDelete(brgyAdmin);
+    setIsDeleteModalOpen(true);
+  };
+
+  async function confirmDelete() {
+    if (!brgyAdminToDelete) return;
 
     try {
-      const res = await fetch(`/api/barangay-admins/${brgyAdminId}`, {
+      const res = await fetch(`/api/barangay-admins/${brgyAdminToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await res.json();
+      const data = await res.json(); // Parse the JSON response
+
       if (res.ok) {
-        setBrgyAdmins((prevBrgyAdmins) =>
-          prevBrgyAdmins.filter((brgyAdmin) => brgyAdmin.id !== brgyAdminId)
-        ); // Remove deleted admin from the list
-        alert("Barangay Admin deleted successfully!");
+        // Refresh the list after deletion
+        await getBrgyAdmins();
+        setIsDeleteModalOpen(false);
       } else {
-        setErrors([data.message || "Failed to delete admin"]);
+        console.error(
+          "Error deleting barangay admin:",
+          data.message || "Unknown error"
+        );
       }
     } catch (error) {
-      setErrors(["An error occurred while deleting the admin."]);
+      console.error(
+        "An error occurred while deleting a barangay admin:",
+        error
+      );
     }
+  }
+
+  async function confirmRestore() {
+    if (!brgyAdminToRestore) return;
+
+    try {
+      const res = await fetch(
+        `/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json(); // Parse the JSON response
+
+      if (res.ok) {
+        // Refresh the list after deletion
+        await getBrgyAdmins();
+        setIsRestoreModalOpen(false);
+      } else {
+        console.error(
+          "Error restoring a barangay admin:",
+          data.message || "Unknown error"
+        );
+      }
+    } catch (error) {
+      console.error(
+        "An error occurred while restoring a barangay admin:",
+        error
+      );
+    }
+  }
+  const handleRestore = async (brgyAdmin) => {
+    setBrgyAdminToRestore(brgyAdmin);
+    setIsRestoreModalOpen(true);
   };
 
   // Fetch Barangay Admins when component mounts
@@ -154,24 +199,25 @@ export default function BrgyAdmins() {
   }, []);
 
   return (
-    <div>
-      <h1 className="title">Barangay Admins</h1>
-      {/* Add Post Button */}
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Barangay Admins</h1>
+      {/* Add New Barangay Admin Button */}
       <button
         onClick={() => {
-          setIsModalOpen(true); // Open the modal for creating a new post
-          setSelectedBrgyAdmin(null); // Clear selected post (in case we had an edit mode before)
+          setIsModalOpen(true);
+          setSelectedBrgyAdmin(null); // Ensure no selected admin
           setFormData({
+            // Clear the form for new entries
             email: "",
             barangay: "",
             brgy_admin_name: "",
             password: "",
             password_confirmation: "",
-          }); // Reset form data
+          });
         }}
-        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mb-4"
+        className="btn btn-primary mb-4"
       >
-        Add New Barangay Admin
+        Add a New Barangay Admin
       </button>
 
       {/* Errors display */}
@@ -191,6 +237,7 @@ export default function BrgyAdmins() {
             <th className="px-4 py-2 text-left">Brgy Admin Name</th>
             <th className="px-4 py-2 text-left">Email</th>
             <th className="px-4 py-2 text-left">Barangay</th>
+            <th className="px-4 py-2 text-left">Status</th>
             <th className="px-4 py-2 text-left">Actions</th>
           </tr>
         </thead>
@@ -209,8 +256,6 @@ export default function BrgyAdmins() {
             </tr>
           ) : (
             brgyAdmins.map((brgyAdmin) => {
-              console.log(brgyAdmin); // Log the brgyAdmin object
-
               if (!brgyAdmin) {
                 return (
                   <tr key="invalid-admin">
@@ -220,7 +265,6 @@ export default function BrgyAdmins() {
                   </tr>
                 );
               }
-
               return (
                 <tr key={brgyAdmin.id} className="border-b hover:bg-slate-100">
                   <td className="px-4 py-2">{brgyAdmin.brgy_admin_name}</td>
@@ -228,23 +272,37 @@ export default function BrgyAdmins() {
                     {brgyAdmin.user?.email || "No Email"}
                   </td>
                   <td className="px-4 py-2">{brgyAdmin.barangay}</td>
+                  <td
+                    className={`px-4 py-2 font-semibold ${
+                      brgyAdmin.user?.status === "ACTIVE"
+                        ? "text-green-600"
+                        : brgyAdmin.user?.status === "INACTIVE"
+                        ? "text-red-600"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {brgyAdmin.user?.status || "N/A"}
+                  </td>
                   <td className="px-4 py-2 flex space-x-2">
                     <button
                       onClick={() => handleEdit(brgyAdmin)}
-                      className="text-blue-500 hover:text-blue-700"
+                      className="btn btn-primary btn-sm mr-2"
                     >
-                      📝 Edit
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(post.id);
-                    }}
-                    className="delete"
-                    title="Delete"
-                  >
-                    ❌ Delete
-                  </button>
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(brgyAdmin)}
+                      className="btn btn-error btn-sm"
+                    >
+                      ❌ Delete
+                    </button>
+
+                    <button
+                      onClick={() => handleRestore(brgyAdmin)}
+                      className="btn btn-success btn-sm mr-2"
+                    >
+                      🔃 Restore
+                    </button>
                   </td>
                 </tr>
               );
@@ -253,17 +311,19 @@ export default function BrgyAdmins() {
         </tbody>
       </table>
 
-      {/* Modal for editing */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-overlay flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg">
+        <div className="modal modal-open">
+          <div className="modal-box">
             <h2 className="text-xl font-semibold mb-4">
-              {selectedBrgyAdmin ? "Edit Barangay Admin" : "Add Barangay Admin"}
+              {selectedBrgyAdmin ? "Edit Brgy Admin" : "Add Brgy Admin"}
             </h2>
             <form onSubmit={handleSave}>
-              <div className="mb-4">
-                <label className="block mb-2">Brgy Admin Name</label>
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Brgy Admin Name</span>
+                </label>
                 <input
+                  className="input input-bordered"
                   type="text"
                   value={formData.brgy_admin_name}
                   onChange={(e) =>
@@ -272,45 +332,68 @@ export default function BrgyAdmins() {
                       brgy_admin_name: e.target.value,
                     })
                   }
-                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-2">Email</label>
+              {errors.brgy_admin_name && (
+                <p className="text-error">{errors.brgy_admin_name[0]}</p>
+              )}
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Email</span>
+                </label>
                 <input
+                  className="input input-bordered"
                   type="email"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-2">Barangay</label>
+              {errors.email && <p className="text-error">{errors.email[0]}</p>}
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Barangay</span>
+                </label>
                 <input
+                  className="input input-bordered"
                   type="text"
                   value={formData.barangay}
                   onChange={(e) =>
                     setFormData({ ...formData, barangay: e.target.value })
                   }
-                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-2">Password</label>
+
+              {errors.barangay && (
+                <p className="text-error">{errors.barangay[0]}</p>
+              )}
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
                 <input
+                  className="input input-bordered"
                   type="password"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-2">Confirm Password</label>
+              {errors.password && (
+                <p className="text-error">{errors.password[0]}</p>
+              )}
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Confirm Password</span>
+                </label>
                 <input
+                  className="input input-bordered"
                   type="password"
                   value={formData.password_confirmation}
                   onChange={(e) =>
@@ -319,25 +402,73 @@ export default function BrgyAdmins() {
                       password_confirmation: e.target.value,
                     })
                   }
-                  className="w-full border px-3 py-2 rounded"
                 />
               </div>
+              {errors.password_confirmation && (
+                <p className="text-error">{errors.password_confirmation[0]}</p>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={handleCloseModal}
-                  className="bg-gray-400 text-white px-4 py-2 rounded"
+                  onClick={() => setIsModalOpen(false)}
+                  className="btn btn-ghost"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
+                <button type="submit" className="btn btn-primary">
                   Save
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Confirm Delete</h3>
+            <p className="py-4">
+              Are you sure you want to delete{" "}
+              {brgyAdminToDelete?.brgy_admin_name}?
+            </p>
+            <div className="modal-action">
+              <button className="btn btn-error" onClick={confirmDelete}>
+                Yes, Delete
+              </button>
+              <button
+                className="btn"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Confirmation Modal */}
+      {isRestoreModalOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Confirm Restore</h3>
+            <p className="py-4">
+              Are you sure you want to restore{" "}
+              {brgyAdminToRestore?.brgy_admin_name}?
+            </p>
+            <div className="modal-action">
+              <button className="btn btn-success" onClick={confirmRestore}>
+                Yes, Restore
+              </button>
+              <button
+                className="btn"
+                onClick={() => setIsRestoreModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

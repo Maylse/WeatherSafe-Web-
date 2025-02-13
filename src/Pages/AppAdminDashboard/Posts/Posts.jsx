@@ -1,115 +1,103 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
-import "./Post.css";
 
 export default function Posts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
-  const { user, token, setUser, setToken } = useContext(AppContext);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
+  const { user, token } = useContext(AppContext);
   const [posts, setPosts] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
-  const [formData, setFormData] = useState({
-    title: "",
-    body: "",
-  });
+  const [formData, setFormData] = useState({ title: "", body: "" });
 
   async function getPosts() {
     const res = await fetch("/api/posts", {
-      method: "get",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-
-    if (res.ok) {
-      setPosts(data.posts);
-    }
+    if (res.ok) setPosts(data.posts);
   }
 
   const handleEdit = (post) => {
-    setSelectedPost(post); // Set the selected post for the modal
-    setIsModalOpen(true); // Open the modal
-    setFormData({
-      title: post.title,
-      body: post.body,
-    }); // Set the form data with selected post data
+    setSelectedPost(post); // Ensure post is stored
+    setFormData({ title: post.title, body: post.body }); // Populate form fields
+    setIsModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const { title, body } = formData;
 
-    const method = selectedPost ? "PUT" : "POST"; // If editing, use PUT, else use POST
+    if (!formData.title.trim() || !formData.body.trim()) {
+      setErrors(["Title and body cannot be empty."]);
+      return;
+    }
+
+    // Ensure selectedPost is correctly checked
+    const method = selectedPost && selectedPost.id ? "PUT" : "POST";
     const endpoint = selectedPost
       ? `/api/posts/${selectedPost.id}`
-      : "/api/posts"; // Different endpoint for editing vs creating
+      : "/api/posts";
 
     try {
       const res = await fetch(endpoint, {
-        method: method,
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ title, body }),
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        if (selectedPost) {
-          setPosts(
-            posts.map((post) =>
-              post.id === selectedPost.id ? data.post : post
-            )
-          );
-        } else {
-          setPosts([data.post, ...posts]);
-        }
+        setPosts((prevPosts) =>
+          selectedPost
+            ? prevPosts.map((post) =>
+                post.id === selectedPost.id ? data.post : post
+              )
+            : [data.post, ...prevPosts]
+        );
 
-        navigate("/posts"); // Navigate back to posts list
-        setIsModalOpen(false); // Close the modal
-        setSelectedPost(null); // Clear selected post
-        setFormData({ title: "", body: "" }); // Reset form data
+        setIsModalOpen(false);
+        setSelectedPost(null); // Clear selected post after update
+        setFormData({ title: "", body: "" }); // Reset form
       } else {
-        setErrors(data.errors); // Set validation errors
+        setErrors(data.errors || ["Something went wrong!"]);
       }
     } catch (error) {
-      console.error("Error saving post:", error);
       setErrors(["Something went wrong!"]);
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false); // Close the modal
-    setSelectedPost(null); // Clear the selected post
-    setFormData({ title: "", body: "" }); // Reset form data
+  const handleDelete = (post) => {
+    setPostToDelete(post);
+    setIsDeleteModalOpen(true);
   };
-
-  async function handleDelete(postId) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this post?"
-    );
-    if (!confirmed) return;
+  async function confirmDelete() {
+    if (!postToDelete) return;
 
     try {
-      const res = await fetch(`/api/posts/${postId}`, {
+      const res = await fetch(`/api/posts/${postToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const data = await res.json();
+      const data = await res.json(); // Parse the JSON response
 
       if (res.ok) {
-        setPosts(posts.filter((post) => post.id !== postId));
-        alert("Post deleted successfully!");
+        // ✅ Remove the barangay from the list
+        setPosts(posts.filter((post) => post.id !== postToDelete.id));
+        setIsDeleteModalOpen(false);
+        console.log(data.message); // Debugging: Ensure successful message logs
       } else {
-        console.error("Error deleting post:", data);
+        console.error("Error deleting post:", data.message || "Unknown error");
       }
     } catch (error) {
       console.error("An error occurred while deleting the post:", error);
@@ -121,111 +109,137 @@ export default function Posts() {
   }, []);
 
   return (
-    <div>
-      <h1 className="title">Posts</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Posts</h1>
 
       <button
         onClick={() => {
           setIsModalOpen(true);
-          setSelectedPost(null);
-          setFormData({ title: "", body: "" });
+          setSelectedPost(null); // Ensure no selected admin
+          setFormData({
+            // Clear the form for new entries
+            title: "",
+            body: "",
+          });
         }}
-        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 mb-4"
+        className="btn btn-primary mb-4"
       >
         Add New Post
       </button>
 
-      <table className="table-auto w-full">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Body</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.length === 0 ? (
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full text-sm border-collapse mt-4">
+          <thead>
             <tr>
-              <td colSpan="3" className="text-center">
-                No posts available.
-              </td>
+              <th className="px-4 py-2 text-left">Title</th>
+              <th className="px-4 py-2 text-left">Body</th>
+              <th className="px-4 py-2 text-left">Actions</th>
             </tr>
-          ) : (
-            posts.map((post) => (
-              <tr key={post.id}>
-                <td>{post.title}</td>
-                <td>{post.body}</td>
-                <td className="actions">
-                  <button
-                    onClick={() => handleEdit(post)}
-                    className="edit"
-                    title="Edit"
-                  >
-                    📝 Edit
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(post.id);
-                    }}
-                    className="delete"
-                    title="Delete"
-                  >
-                    ❌ Delete
-                  </button>
+          </thead>
+          <tbody>
+            {posts.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="px-4 py-2 text-center">
+                  No posts available.
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              posts.map((post) => (
+                <tr key={post.id} className="border-b hover:bg-slate-100">
+                  <td className="px-4 py-2">{post.title}</td>
+                  <td className="px-4 py-2">{post.body}</td>
+                  <td>
+                    <button
+                      onClick={() => handleEdit(post)}
+                      className="btn btn-primary btn-sm mr-2"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(post)}
+                      className="btn btn-error btn-sm"
+                    >
+                      ❌ Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-overlay flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-lg w-full shadow-lg">
+        <div className="modal modal-open">
+          <div className="modal-box">
             <h2 className="text-xl font-semibold mb-4">
               {selectedPost ? "Edit Post" : "Add Post"}
             </h2>
             <form onSubmit={handleSave}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium">Title</label>
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Title</span>
+                </label>
                 <input
                   type="text"
-                  className="mt-1 block w-full p-2 border rounded"
+                  className="input input-bordered"
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
                 />
-                {errors.title && <p className="error">{errors.title[0]}</p>}
+                {errors.title && (
+                  <p className="text-error">{errors.title[0]}</p>
+                )}
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium">Body</label>
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">Body</span>
+                </label>
                 <textarea
-                  className="mt-1 block w-full p-2 border rounded"
+                  className="textarea textarea-bordered"
                   value={formData.body}
                   onChange={(e) =>
                     setFormData({ ...formData, body: e.target.value })
                   }
-                />
-                {errors.body && <p className="error">{errors.body[0]}</p>}
+                ></textarea>
+                {errors.body && <p className="text-error">{errors.body[0]}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 bg-gray-300 rounded text-black hover:bg-gray-400"
+                  onClick={() => setIsModalOpen(false)}
+                  className="btn btn-ghost"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
+                <button type="submit" className="btn btn-primary">
                   Save
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Confirm Delete</h3>
+            <p className="py-4">
+              Are you sure you want to delete {postToDelete?.title}?
+            </p>
+            <div className="modal-action">
+              <button className="btn btn-error" onClick={confirmDelete}>
+                Yes, Delete
+              </button>
+              <button
+                className="btn"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
