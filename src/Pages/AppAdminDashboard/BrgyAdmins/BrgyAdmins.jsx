@@ -5,6 +5,7 @@ import { AppContext } from "../../../Context/AppContext";
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [brgyAdminToDelete, setBrgyAdminToDelete] = useState(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
@@ -18,9 +19,12 @@ export default function BrgyAdmins() {
     email: "",
     barangay: "",
     brgy_admin_name: "",
+    profile: "",
     password: "",
     password_confirmation: "",
   });
+
+  const [previewImage, setPreviewImage] = useState(null);
 
   async function getBrgyAdmins() {
     try {
@@ -44,6 +48,97 @@ export default function BrgyAdmins() {
     }
   }
 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result); // Update preview with new image
+      };
+      reader.readAsDataURL(file);
+      setFormData({ ...formData, profile: file }); // Store new file in formData
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "WeatherSafePreset"); // Ensure this preset exists in Cloudinary
+
+    try {
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Image upload failed");
+      }
+
+      const data = await response.json();
+      return data.secure_url; // The URL of the uploaded image
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      return null;
+    }
+  };
+
+  const extractPublicId = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // Remove Cloudinary base URL
+    const urlParts = imageUrl.split("/");
+
+    // Find the index of 'upload' and ignore version numbers
+    const uploadIndex = urlParts.findIndex((part) => part === "upload");
+    if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) return null;
+
+    // Extract parts after 'upload' (excluding version)
+    const relevantParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' + version
+
+    // Join folder structure (if any) and filename without extension
+    const publicId = relevantParts.join("/").split(".")[0];
+
+    return publicId;
+  };
+
+  const handleDeleteImage = async (imageUrl) => {
+    if (!imageUrl) return;
+
+    console.log("Image URL before extracting publicId:", imageUrl);
+
+    const publicId = extractPublicId(imageUrl); // Use the corrected function
+
+    console.log("Extracted Public ID:", publicId);
+
+    if (!publicId) {
+      console.error("Failed to extract a valid public ID.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ publicId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete image");
+      }
+
+      console.log("Previous image deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete previous image:", error);
+    }
+  };
+
   const handleEdit = (brgyAdmin) => {
     setSelectedBrgyAdmin(brgyAdmin); // Set the selected admin for the modal
     setIsModalOpen(true); // Open the modal
@@ -51,15 +146,43 @@ export default function BrgyAdmins() {
       email: brgyAdmin?.user?.email || "", // Safe access for email
       barangay: brgyAdmin.barangay || "",
       brgy_admin_name: brgyAdmin.brgy_admin_name || "",
+      password: "",
+      password_confirmation: "",
     });
+    console.log(brgyAdmin);
+    setPreviewImage(brgyAdmin.user?.profile); // Set existing image as preview
   };
 
   const handleSave = async (e) => {
     e.preventDefault(); // Prevent the form from submitting normally
+
+    if (isSaving) return; // Prevent further clicks if saving is in progress
+
+    setIsSaving(true); // Disable the save button while saving
+
+    // Check if the profile has been updated
+    if (formData.profile instanceof File) {
+      // If a new file is chosen, first delete the old image if it exists
+      if (selectedBrgyAdmin && selectedBrgyAdmin.user.profile) {
+        await handleDeleteImage(selectedBrgyAdmin.user.profile); // Delete the old image
+      }
+
+      // Upload the new image
+      const imageUrl = await handleImageUpload(formData.profile);
+      if (imageUrl) {
+        formData.profile = imageUrl; // Save image URL after upload
+      } else {
+        alert("Failed to upload image.");
+        setIsSaving(false); // Re-enable the button
+        return;
+      }
+    }
+
     const {
       email,
       barangay,
       brgy_admin_name,
+      profile,
       password,
       password_confirmation,
     } = formData;
@@ -80,6 +203,7 @@ export default function BrgyAdmins() {
           email,
           barangay,
           brgy_admin_name,
+          profile,
           password,
           password_confirmation,
         }),
@@ -90,11 +214,13 @@ export default function BrgyAdmins() {
         // Refetch the list of Barangay Admins to ensure the table is up-to-date
         await getBrgyAdmins();
         setIsModalOpen(false);
+        setPreviewImage(null);
         setSelectedBrgyAdmin(null);
         setFormData({
           email: "",
           barangay: "",
           brgy_admin_name: "",
+          profile: "",
           password: "",
           password_confirmation: "",
         });
@@ -104,19 +230,9 @@ export default function BrgyAdmins() {
     } catch (error) {
       console.error("Error saving Barangay Admin:", error);
       setErrors(["Something went wrong!"]);
+    } finally {
+      setIsSaving(false); // Re-enable the button after the operation is finished
     }
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false); // Close the modal
-    setSelectedBrgyAdmin(null); // Clear the selected post
-    setFormData({
-      email: "",
-      barangay: "",
-      brgy_admin_name: "",
-      password: "",
-      password_confirmation: "",
-    }); // Reset form data
   };
 
   const handleDelete = (brgyAdmin) => {
@@ -317,6 +433,49 @@ export default function BrgyAdmins() {
             <h2 className="text-xl font-semibold mb-4">
               {selectedBrgyAdmin ? "Edit Brgy Admin" : "Add Brgy Admin"}
             </h2>
+
+            {/* Profile Picture Upload */}
+            <div className="flex flex-col items-center gap-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Profile Picture
+              </label>
+              <div
+                className="relative w-24 h-24 rounded-full border border-gray-300 shadow-md flex items-center justify-center cursor-pointer hover:opacity-80 transition"
+                onClick={() => document.getElementById("fileInput").click()}
+              >
+                {previewImage ? (
+                  <img
+                    src={previewImage}
+                    alt="Profile Preview"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-10 h-10 text-gray-500"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18 18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+              </div>
+              {/* Hidden File Input */}
+              <input
+                id="fileInput"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
+
             <form onSubmit={handleSave}>
               <div className="form-control mb-4">
                 <label className="label">
@@ -366,7 +525,6 @@ export default function BrgyAdmins() {
                   }
                 />
               </div>
-
               {errors.barangay && (
                 <p className="text-error">{errors.barangay[0]}</p>
               )}

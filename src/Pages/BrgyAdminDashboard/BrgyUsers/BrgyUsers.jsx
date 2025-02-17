@@ -5,6 +5,8 @@ import { AppContext } from "../../../Context/AppContext";
 export default function BrgyUsers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [brgyUserToDelete, setBrgyUserToDelete] = useState(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
@@ -20,7 +22,10 @@ export default function BrgyUsers() {
     barangay: "",
     password: "",
     password_confirmation: "",
+    profile: "",
   });
+
+  const [previewImage, setPreviewImage] = useState(null);
 
   async function getBrgyUsers() {
     try {
@@ -44,6 +49,97 @@ export default function BrgyUsers() {
     }
   }
 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result); // Update preview with new image
+      };
+      reader.readAsDataURL(file);
+      setFormData({ ...formData, profile: file }); // Store new file in formData
+    }
+  };
+
+  const handleImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "WeatherSafePreset"); // Ensure this preset exists in Cloudinary
+
+    try {
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Image upload failed");
+      }
+
+      const data = await response.json();
+      return data.secure_url; // The URL of the uploaded image
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      return null;
+    }
+  };
+
+  const extractPublicId = (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // Remove Cloudinary base URL
+    const urlParts = imageUrl.split("/");
+
+    // Find the index of 'upload' and ignore version numbers
+    const uploadIndex = urlParts.findIndex((part) => part === "upload");
+    if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) return null;
+
+    // Extract parts after 'upload' (excluding version)
+    const relevantParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' + version
+
+    // Join folder structure (if any) and filename without extension
+    const publicId = relevantParts.join("/").split(".")[0];
+
+    return publicId;
+  };
+
+  const handleDeleteImage = async (imageUrl) => {
+    if (!imageUrl) return;
+
+    console.log("Image URL before extracting publicId:", imageUrl);
+
+    const publicId = extractPublicId(imageUrl); // Use the corrected function
+
+    console.log("Extracted Public ID:", publicId);
+
+    if (!publicId) {
+      console.error("Failed to extract a valid public ID.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ publicId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete image");
+      }
+
+      console.log("Previous image deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete previous image:", error);
+    }
+  };
+
   const handleEdit = (brgyUser) => {
     setSelectedBrgyUser(brgyUser); // Set the selected admin for the modal
     setIsModalOpen(true); // Open the modal
@@ -51,12 +147,41 @@ export default function BrgyUsers() {
       email: brgyUser?.user?.email || "", // Safe access for email
       barangay: brgyUser.barangay || "",
       brgy_user_name: brgyUser.brgy_user_name || "",
+      password: "",
+      password_confirmation: "",
     });
+
+    setPreviewImage(brgyUser.user?.profile); // Set existing image as preview
   };
 
   const handleSave = async (e) => {
     e.preventDefault(); // Prevent the form from submitting normally
-    const { email, brgy_user_name, password, password_confirmation } = formData;
+
+    if (isSaving) return; // Prevent further clicks if saving is in progress
+    setLoading(true);
+    setIsSaving(true); // Disable the save button while saving
+
+    // Check if the profile has been updated
+    if (formData.profile instanceof File) {
+      if (selectedBrgyUser && selectedBrgyUser.user.profile) {
+        console.log("Deleting old image: ", selectedBrgyUser.user.profile); // Debugging step
+        await handleDeleteImage(selectedBrgyUser.user.profile); // Delete the old image
+      }
+
+      // Upload the new image
+      const imageUrl = await handleImageUpload(formData.profile);
+      if (imageUrl) {
+        formData.profile = imageUrl; // Save image URL after upload
+      } else {
+        alert("Failed to upload image.");
+        setLoading(false);
+        setIsSaving(false); // Re-enable the button
+        return;
+      }
+    }
+
+    const { email, brgy_user_name, profile, password, password_confirmation } =
+      formData;
 
     const method = selectedBrgyUser ? "PUT" : "POST"; // Use PUT if editing, POST if creating
     const endpoint = selectedBrgyUser
@@ -73,6 +198,7 @@ export default function BrgyUsers() {
         body: JSON.stringify({
           email,
           brgy_user_name,
+          profile,
           password,
           password_confirmation,
         }),
@@ -83,11 +209,13 @@ export default function BrgyUsers() {
         // Refetch the list of Barangay Admins to ensure the table is up-to-date
         await getBrgyUsers();
         setIsModalOpen(false);
+        setPreviewImage(null);
         setSelectedBrgyUser(null);
         setFormData({
           email: "",
           barangay: "",
           brgy_user_name: "",
+          profile: "",
           password: "",
           password_confirmation: "",
         });
@@ -97,19 +225,9 @@ export default function BrgyUsers() {
     } catch (error) {
       console.error("Error saving Barangay User:", error);
       setErrors(["Something went wrong!"]);
+    } finally {
+      setIsSaving(false); // Re-enable the button after the operation is finished
     }
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false); // Close the modal
-    setSelectedBrgyUser(null); // Clear the selected post
-    setFormData({
-      email: "",
-      barangay: "",
-      brgy_user_name: "",
-      password: "",
-      password_confirmation: "",
-    }); // Reset form data
   };
 
   const handleDelete = (brgyUser) => {
@@ -199,6 +317,7 @@ export default function BrgyUsers() {
             email: "",
             barangay: "",
             brgy_user_name: "",
+            profile: "",
             password: "",
             password_confirmation: "",
           });
@@ -287,13 +406,55 @@ export default function BrgyUsers() {
           )}
         </tbody>
       </table>
-      {/* Add Modal */}
+      {/* Add Edit Modal */}
       {isModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
             <h2 className="text-xl font-semibold mb-4">
               {selectedBrgyUser ? "Edit Brgy User" : "Add Brgy User"}
             </h2>
+
+            {/* Profile Picture Upload */}
+            <div className="flex flex-col items-center gap-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Profile Picture
+              </label>
+              <div
+                className="relative w-24 h-24 rounded-full border border-gray-300 shadow-md flex items-center justify-center cursor-pointer hover:opacity-80 transition"
+                onClick={() => document.getElementById("fileInput").click()}
+              >
+                {previewImage ? (
+                  <img
+                    src={previewImage}
+                    alt="Profile Preview"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-10 h-10 text-gray-500"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18 18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+              </div>
+              {/* Hidden File Input */}
+              <input
+                id="fileInput"
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </div>
             <form onSubmit={handleSave}>
               <div className="form-control mb-4">
                 <label className="label">
@@ -314,7 +475,6 @@ export default function BrgyUsers() {
               {errors.brgy_user_name && (
                 <p className="text-error">{errors.brgy_user_name[0]}</p>
               )}
-
               <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Email</span>
@@ -375,8 +535,12 @@ export default function BrgyUsers() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Save
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

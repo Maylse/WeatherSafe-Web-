@@ -9,6 +9,7 @@ import BrgyAdminDashboard from "../Pages/BrgyAdminDashboard/BrgyAdminDashboard";
 import BarangayUsers from "../Pages/BrgyAdminDashboard/BrgyUsers/BrgyUsers";
 import CommunityUsers from "../Pages/BrgyAdminDashboard/CommunityUsers/CommunityUsers";
 import Logo from "../Pages/Auth/logo.png";
+import Profile from "./Profile";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -78,6 +79,21 @@ export default function Layout() {
         {user && (
           <aside className="w-64 bg-base-300 p-4 shadow-lg">
             <div className="flex flex-col items-center w-full">
+              {/* Profile Section */}
+              <div
+                className="flex items-center space-x-4 p-3 cursor-pointer hover:bg-base-200 rounded-lg w-full"
+                onClick={() => setSelected("Profile")}
+              >
+                <img
+                  src={user.profile || "https://placehold.co/100"}
+                  alt="User Profile"
+                  className="w-12 h-12 rounded-full border border-gray-800"
+                />
+                <div>
+                  <p className="text-lg font-semibold">{user.name}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                </div>
+              </div>
               {/* Logo */}
               <div className="mb-4">
                 <img
@@ -114,7 +130,11 @@ export default function Layout() {
                 Welcome, {user.name}
               </h2>
               <div className="mt-4">
-                {menuItems.find((item) => item.label === selected)?.component}
+                {selected === "Profile" ? (
+                  <Profile />
+                ) : (
+                  menuItems.find((item) => item.label === selected)?.component
+                )}
               </div>
             </div>
           )}
