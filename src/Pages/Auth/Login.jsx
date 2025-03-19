@@ -1,7 +1,9 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
-import logo from "./logo.png";
+import logo from "../../assets/logo.png";
+import { getToken } from "firebase/messaging";
+import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -11,15 +13,34 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  async function requestFcmToken() {
+    try {
+      const fcmToken = await getToken(messaging, {
+        vapidKey:
+          "BE53qXL30ywUtx63VkQZVgt37Bk3eaNdB6K6WQ3T70cBQgKx89Gcs2gv-x1T5Kya6QXFCuFy_-rcM0rVUu5HgCg",
+      });
+      if (!fcmToken) {
+        console.warn("No FCM token received.");
+        return null;
+      }
+      return fcmToken;
+    } catch (error) {
+      console.error("Error retrieving FCM token:", error);
+      return null;
+    }
+  }
+
   async function handleLogin(e) {
     e.preventDefault();
     setErrors({});
-    setIsLoading(true); // Show spinner
+    setIsLoading(true);
 
     try {
+      const fcmToken = await requestFcmToken();
+
       const res = await fetch("/api/login", {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -44,22 +65,18 @@ export default function Login() {
       console.error("Login error:", error);
       setErrors({ general: ["Something went wrong. Please try again."] });
     } finally {
-      setIsLoading(false); // Hide spinner
+      setIsLoading(false);
     }
   }
 
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />
-
       <div className="w-full max-w-md p-8 bg-blue-600 shadow-lg mt-5 rounded-lg">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-50">Login</h2>
         </div>
-
-        {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
-          {/* Email Input */}
           <div className="form-control">
             <label className="label">
               <span className="label-text text-gray-50">Email</span>
@@ -78,8 +95,6 @@ export default function Login() {
               <p className="text-red-500 text-sm">{errors.email[0]}</p>
             )}
           </div>
-
-          {/* Password Input */}
           <div className="form-control">
             <label className="label">
               <span className="label-text text-gray-50">Password</span>
@@ -98,8 +113,6 @@ export default function Login() {
               <p className="text-red-500 text-sm">{errors.password[0]}</p>
             )}
           </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             className="btn btn-primary w-full flex justify-center items-center text-gray-100 text-sm"
@@ -112,13 +125,9 @@ export default function Login() {
             )}
           </button>
         </form>
-
-        {/* Error Messages */}
         {errors.general && (
           <p className="text-red-500 text-sm mt-2">{errors.general[0]}</p>
         )}
-
-        {/* Account Inactive Modal */}
         {showModal && (
           <div className="modal modal-open">
             <div className="modal-box">
