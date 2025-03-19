@@ -1,6 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
+import { Bell } from "lucide-react"; // Import Bell icon from lucide-react
 import AdminDashboard from "../Pages/AppAdminDashboard/AdminDashboard";
 import BrgyAdmins from "../Pages/AppAdminDashboard/BrgyAdmins/BrgyAdmins";
 import Barangays from "../Pages/AppAdminDashboard/Barangays/Barangays";
@@ -8,13 +9,16 @@ import Posts from "../Pages/AppAdminDashboard/Posts/Posts";
 import BrgyAdminDashboard from "../Pages/BrgyAdminDashboard/BrgyAdminDashboard";
 import BarangayUsers from "../Pages/BrgyAdminDashboard/BrgyUsers/BrgyUsers";
 import CommunityUsers from "../Pages/BrgyAdminDashboard/CommunityUsers/CommunityUsers";
-import Logo from "../Pages/Auth/logo.png";
+import Logo from "../assets/logo.png";
 import Profile from "./Profile";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
   const [selected, setSelected] = useState("Dashboard");
+  const notificationsRef = useRef(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -24,6 +28,45 @@ export default function Layout() {
       navigate("/");
     }
   }, [user, navigate, setUser]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  async function fetchNotifications() {
+    const res = await fetch("/api/notifications", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    setNotifications(data.notifications);
+  }
+
+  async function markAllAsRead() {
+    await fetch("/api/notifications/mark-all-as-read", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchNotifications(); // Refresh notifications after marking as read
+  }
 
   async function handleLogout(e) {
     e.preventDefault();
@@ -65,12 +108,63 @@ export default function Layout() {
   return (
     <div className="flex flex-col min-h-screen bg-base-100">
       {/* Header */}
-      <header className="navbar bg-primary text-white shadow-md p-4 flex justify-end">
-        {user && (
+      <header className="navbar bg-primary text-white shadow-md p-4 flex justify-between items-center">
+        {/* Logo */}
+        <div>
+          <img src={Logo} alt="App Logo" className="w-32 h-auto" />
+        </div>
+
+        {/* Notifications & Logout */}
+        <div className="flex items-center space-x-6">
+          {/* Notification Bell */}
+          <div
+            className="relative cursor-pointer"
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              markAllAsRead(); // Mark all notifications as read when the bell is clicked
+            }}
+            ref={notificationsRef}
+          >
+            <Bell className="w-8 h-8" />
+            {notifications.filter((notif) => !notif.is_read).length > 0 && (
+              <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {notifications.filter((notif) => !notif.is_read).length}
+              </div>
+            )}
+          </div>
+
+          {/* Notifications Dropdown */}
+          {showNotifications && (
+            <div className="absolute right-16 mt-2 w-64 bg-white shadow-lg rounded-lg p-4 z-50">
+              <h3 className="text-lg font-semibold text-black">
+                Notifications
+              </h3>
+              {notifications.length > 0 ? (
+                <ul className="mt-2 space-y-2">
+                  {notifications.map((notif, index) => (
+                    <li
+                      key={index}
+                      className={`p-2 rounded-md ${
+                        notif.is_read ? "bg-green-100" : "bg-red-100"
+                      }`}
+                    >
+                      {notif.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500 mt-2">
+                  No new notifications
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Logout Button */}
           <form onSubmit={handleLogout}>
             <button className="btn btn-error text-white">Log out</button>
           </form>
-        )}
+        </div>
       </header>
 
       {/* Main Layout */}
