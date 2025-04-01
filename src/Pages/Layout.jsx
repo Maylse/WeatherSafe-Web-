@@ -17,7 +17,11 @@ export default function Layout() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
-  const [selected, setSelected] = useState("Dashboard");
+  const [selected, setSelected] = useState(
+    user?.userType === "app_admin"
+      ? "Admin Dashboard"
+      : "Barangay Admin Dashboard"
+  );
   const notificationsRef = useRef(null);
 
   useEffect(() => {
@@ -85,7 +89,10 @@ export default function Layout() {
   const getMenuItems = () => {
     if (user?.userType === "app_admin") {
       return [
-        { label: "Admin Dashboard", component: <AdminDashboard /> },
+        {
+          label: "Admin Dashboard",
+          component: <AdminDashboard setSelected={setSelected} />,
+        },
         { label: "Barangay Admins", component: <BrgyAdmins /> },
         { label: "Barangays", component: <Barangays /> },
         { label: "Posts", component: <Posts /> },
@@ -94,7 +101,7 @@ export default function Layout() {
       return [
         {
           label: "Barangay Admin Dashboard",
-          component: <BrgyAdminDashboard />,
+          component: <BrgyAdminDashboard setSelected={setSelected} />,
         },
         { label: "Barangay Users", component: <BarangayUsers /> },
         { label: "Community Users", component: <CommunityUsers /> },

@@ -48,18 +48,26 @@ export default function Login() {
 
       if (data.errors) {
         setErrors(data.errors);
-      } else if (data.user && data.user.status === "INACTIVE") {
-        setShowModal(true);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setToken(null);
-        setUser(null);
       } else if (data.user) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
-        navigate("/dashboard");
+        // Check allowed user types
+        const allowedUserTypes = ["app_admin", "barangay_admin"];
+
+        if (data.user.status === "INACTIVE") {
+          setShowModal(true);
+          clearAuthData();
+        } else if (!allowedUserTypes.includes(data.user.userType)) {
+          setErrors({
+            email: ["This account type cannot access the system"],
+          });
+          clearAuthData();
+        } else {
+          // Successful login for allowed user types
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          setToken(data.token);
+          setUser(data.user);
+          navigate("/dashboard");
+        }
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -68,7 +76,13 @@ export default function Login() {
       setIsLoading(false);
     }
   }
-
+  // Helper function
+  function clearAuthData() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+  }
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />
