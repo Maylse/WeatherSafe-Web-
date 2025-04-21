@@ -2,8 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function Posts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -16,7 +14,7 @@ export default function Posts() {
   const [formData, setFormData] = useState({ title: "", body: "" });
 
   async function getPosts() {
-    const res = await fetch(`${apiUrl}/api/posts`, {
+    const res = await fetch("/api/posts", {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -41,8 +39,8 @@ export default function Posts() {
     // Ensure selectedPost is correctly checked
     const method = selectedPost && selectedPost.id ? "PUT" : "POST";
     const endpoint = selectedPost
-      ? `${apiUrl}/api/posts/${selectedPost.id}`
-      : `${apiUrl}/api/posts`;
+      ? `/api/posts/${selectedPost.id}`
+      : "/api/posts";
 
     try {
       const res = await fetch(endpoint, {
@@ -84,7 +82,7 @@ export default function Posts() {
     if (!postToDelete) return;
 
     try {
-      const res = await fetch(`${apiUrl}//api/posts/${postToDelete.id}`, {
+      const res = await fetch(`/api/posts/${postToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -1,8 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../Context/AppContext";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function Profile() {
   const { token, user, setUser } = useContext(AppContext);
   const [profileData, setProfileData] = useState(null);
@@ -23,7 +21,7 @@ export default function Profile() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await fetch(`${apiUrl}/api/user/profile`, {
+        const response = await fetch("/api/user/profile", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -133,7 +131,7 @@ export default function Profile() {
     }
 
     try {
-      const response = await fetch(`${apiUrl}/api/delete-image`, {
+      const response = await fetch("/api/delete-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -203,7 +201,7 @@ export default function Profile() {
         bodyData.new_password_confirmation = new_password_confirmation;
       }
 
-      const response = await fetch(`${apiUrl}/api/user/profile`, {
+      const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

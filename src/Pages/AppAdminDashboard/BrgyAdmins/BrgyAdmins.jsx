@@ -2,8 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,7 +28,7 @@ export default function BrgyAdmins() {
 
   async function getBrgyAdmins() {
     try {
-      const res = await fetch(`${apiUrl}/api/barangay-admins`, {
+      const res = await fetch("/api/barangay-admins", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -122,7 +120,7 @@ export default function BrgyAdmins() {
     }
 
     try {
-      const response = await fetch(`${apiUrl}/api/delete-image`, {
+      const response = await fetch("/api/delete-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -191,8 +189,8 @@ export default function BrgyAdmins() {
 
     const method = selectedBrgyAdmin ? "PUT" : "POST"; // Use PUT if editing, POST if creating
     const endpoint = selectedBrgyAdmin
-      ? `${apiUrl}/api/barangay-admins/${selectedBrgyAdmin.id}`
-      : `${apiUrl}/api/barangay-admins`; // Adjust endpoint based on the action (create vs update)
+      ? `/api/barangay-admins/${selectedBrgyAdmin.id}`
+      : "/api/barangay-admins"; // Adjust endpoint based on the action (create vs update)
 
     try {
       const res = await fetch(endpoint, {
@@ -246,15 +244,12 @@ export default function BrgyAdmins() {
     if (!brgyAdminToDelete) return;
 
     try {
-      const res = await fetch(
-        `${apiUrl}/api/barangay-admins/${brgyAdminToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch(`/api/barangay-admins/${brgyAdminToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await res.json(); // Parse the JSON response
 
@@ -281,7 +276,7 @@ export default function BrgyAdmins() {
 
     try {
       const res = await fetch(
-        `${apiUrl}/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
+        `/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
         {
           method: "PATCH",
           headers: {

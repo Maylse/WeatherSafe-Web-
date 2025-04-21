@@ -1,8 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function AdminDashboard({ setSelected }) {
   const { user, token } = useContext(AppContext);
   const [stats, setStats] = useState({
@@ -26,9 +24,9 @@ export default function AdminDashboard({ setSelected }) {
       // Fetch all counts in parallel for better performance
       const [barangaysCount, barangayAdminsCount, postsCount] =
         await Promise.all([
-          fetchCount(`${apiUrl}/api/barangays`, "barangays"),
-          fetchCount(`${apiUrl}/api/barangay-admins`, "barangay_admins"),
-          fetchCount(`${apiUrl}/api/posts`, "posts"),
+          fetchCount("api/barangays", "barangays"),
+          fetchCount("api/barangay-admins", "barangay_admins"),
+          fetchCount("api/posts", "posts"),
         ]);
 
       setStats({

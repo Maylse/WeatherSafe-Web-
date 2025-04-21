@@ -23,7 +23,7 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter basename="/WeatherSafe-Web-">
+    <BrowserRouter>
       {/* Place ToastContainer here to make it globally accessible */}
       <ToastContainer
         position="top-right"
