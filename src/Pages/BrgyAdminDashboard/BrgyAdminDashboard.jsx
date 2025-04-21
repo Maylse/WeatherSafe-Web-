@@ -1,9 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
+import api from "../../../api";
 
 export default function BarangayAdminDashboard({ setSelected }) {
-  const { user, token } = useContext(AppContext);
-
+  const { user } = useContext(AppContext);
   const [stats, setStats] = useState({
     barangayUsersCount: 0,
     communityUsersCount: 0,
@@ -13,47 +13,34 @@ export default function BarangayAdminDashboard({ setSelected }) {
 
   useEffect(() => {
     if (user?.userType === "barangay_admin") {
-      // Fixed user type check
       fetchAllStats();
     }
-  }, [user, token]);
+  }, [user]);
 
   async function fetchAllStats() {
     try {
       setStats((prev) => ({ ...prev, loading: true, error: null }));
 
-      const [barangayUsersCount, communityUsersCount] = await Promise.all([
-        fetchCount("api/barangay-user", "barangay_users"),
-        fetchCount("api/community-user", "community_users"),
-      ]);
+      // Fetch all counts in parallel using Axios
+      const [barangayUsersResponse, communityUsersResponse] = await Promise.all(
+        [api.get("/api/barangay-user"), api.get("/api/community-user")]
+      );
 
       setStats({
-        barangayUsersCount,
-        communityUsersCount,
+        barangayUsersCount:
+          barangayUsersResponse.data.barangay_users?.length || 0,
+        communityUsersCount:
+          communityUsersResponse.data.community_users?.length || 0,
         loading: false,
         error: null,
       });
     } catch (error) {
+      console.error("Error fetching stats:", error);
       setStats((prev) => ({
         ...prev,
         loading: false,
         error: "Failed to load dashboard statistics",
       }));
-      console.error("Error fetching stats:", error);
-    }
-  }
-
-  async function fetchCount(endpoint, dataKey) {
-    try {
-      const res = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      return data[dataKey]?.length || 0;
-    } catch (error) {
-      console.error(`Error fetching ${endpoint}:`, error);
-      return 0;
     }
   }
 
@@ -62,12 +49,27 @@ export default function BarangayAdminDashboard({ setSelected }) {
   };
 
   if (stats.loading) {
-    return <div className="p-6">Loading dashboard data...</div>;
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">Brgy Admin Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="card bg-white shadow-lg rounded-lg p-6">
+              <div className="animate-pulse">
+                <div className="h-6 w-3/4 bg-gray-200 rounded mb-4"></div>
+                <div className="h-8 w-1/2 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (stats.error) {
     return (
       <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">Brgy Admin Dashboard</h1>
         <div className="alert alert-error shadow-lg">
           <div>
             <svg
@@ -104,7 +106,7 @@ export default function BarangayAdminDashboard({ setSelected }) {
         {/* Barangay Users Card */}
         <div
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
-          onClick={() => handleCardClick("Barangay Users")} // Matches menuItems label
+          onClick={() => handleCardClick("Barangay Users")}
         >
           <h2 className="text-xl font-semibold mb-2">Total Barangay Users</h2>
           <p className="text-3xl font-bold text-primary">
@@ -118,7 +120,7 @@ export default function BarangayAdminDashboard({ setSelected }) {
         {/* Community Users Card */}
         <div
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
-          onClick={() => handleCardClick("Community Users")} // Matches menuItems label
+          onClick={() => handleCardClick("Community Users")}
         >
           <h2 className="text-xl font-semibold mb-2">Total Community Users</h2>
           <p className="text-3xl font-bold text-primary">

@@ -1,76 +1,76 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
+import api from "../../../../api";
 
 export default function Posts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
-  const { user, token } = useContext(AppContext);
+  const { user } = useContext(AppContext); // Token is handled by api.js
   const [posts, setPosts] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
   const [formData, setFormData] = useState({ title: "", body: "" });
 
+  // Fetch posts using Axios
   async function getPosts() {
-    const res = await fetch("/api/posts", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (res.ok) setPosts(data.posts);
+    try {
+      const response = await api.get("/api/posts");
+      setPosts(response.data.posts || []);
+      setErrors([]);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      setErrors(["Failed to fetch posts"]);
+    }
   }
 
   const handleEdit = (post) => {
-    setSelectedPost(post); // Ensure post is stored
-    setFormData({ title: post.title, body: post.body }); // Populate form fields
+    setSelectedPost(post);
+    setFormData({
+      title: post.title || "",
+      body: post.body || "",
+    });
     setIsModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setErrors([]);
 
     if (!formData.title.trim() || !formData.body.trim()) {
       setErrors(["Title and body cannot be empty."]);
       return;
     }
 
-    // Ensure selectedPost is correctly checked
-    const method = selectedPost && selectedPost.id ? "PUT" : "POST";
-    const endpoint = selectedPost
-      ? `/api/posts/${selectedPost.id}`
-      : "/api/posts";
-
     try {
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const method = selectedPost ? "put" : "post";
+      const endpoint = selectedPost
+        ? `/api/posts/${selectedPost.id}`
+        : "/api/posts";
 
-      const data = await res.json();
+      const response = await api[method](endpoint, formData);
 
-      if (res.ok) {
-        setPosts((prevPosts) =>
-          selectedPost
-            ? prevPosts.map((post) =>
-                post.id === selectedPost.id ? data.post : post
-              )
-            : [data.post, ...prevPosts]
-        );
+      // Update local state
+      setPosts((prevPosts) =>
+        selectedPost
+          ? prevPosts.map((post) =>
+              post.id === selectedPost.id ? response.data.post : post
+            )
+          : [response.data.post, ...prevPosts]
+      );
 
-        setIsModalOpen(false);
-        setSelectedPost(null); // Clear selected post after update
-        setFormData({ title: "", body: "" }); // Reset form
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      setIsModalOpen(false);
+      setSelectedPost(null);
+      setFormData({ title: "", body: "" });
     } catch (error) {
-      setErrors(["Something went wrong!"]);
+      console.error("Error saving post:", error);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors(["Something went wrong!"]);
+      }
     }
   };
 
@@ -78,31 +78,20 @@ export default function Posts() {
     setPostToDelete(post);
     setIsDeleteModalOpen(true);
   };
-  async function confirmDelete() {
+
+  const confirmDelete = async () => {
     if (!postToDelete) return;
 
     try {
-      const res = await fetch(`/api/posts/${postToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await api.delete(`/api/posts/${postToDelete.id}`);
 
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // ✅ Remove the barangay from the list
-        setPosts(posts.filter((post) => post.id !== postToDelete.id));
-        setIsDeleteModalOpen(false);
-        console.log(data.message); // Debugging: Ensure successful message logs
-      } else {
-        console.error("Error deleting post:", data.message || "Unknown error");
-      }
+      // Update local state
+      setPosts(posts.filter((post) => post.id !== postToDelete.id));
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error("An error occurred while deleting the post:", error);
+      console.error("Error deleting post:", error);
     }
-  }
+  };
 
   useEffect(() => {
     getPosts();
@@ -115,17 +104,23 @@ export default function Posts() {
       <button
         onClick={() => {
           setIsModalOpen(true);
-          setSelectedPost(null); // Ensure no selected admin
-          setFormData({
-            // Clear the form for new entries
-            title: "",
-            body: "",
-          });
+          setSelectedPost(null);
+          setFormData({ title: "", body: "" });
         }}
         className="btn btn-primary mb-4"
       >
         Add New Post
       </button>
+
+      {errors.length > 0 && (
+        <div className="alert alert-error mb-4">
+          <ul>
+            {errors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="table-auto w-full text-sm border-collapse mt-4">
@@ -139,7 +134,7 @@ export default function Posts() {
           <tbody>
             {posts.length === 0 ? (
               <tr>
-                <td colSpan="4" className="px-4 py-2 text-center">
+                <td colSpan="3" className="px-4 py-2 text-center">
                   No posts available.
                 </td>
               </tr>
@@ -148,7 +143,7 @@ export default function Posts() {
                 <tr key={post.id} className="border-b hover:bg-slate-100">
                   <td className="px-4 py-2">{post.title}</td>
                   <td className="px-4 py-2">{post.body}</td>
-                  <td>
+                  <td className="px-4 py-2">
                     <button
                       onClick={() => handleEdit(post)}
                       className="btn btn-primary btn-sm mr-2"
@@ -187,10 +182,8 @@ export default function Posts() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
+                  required
                 />
-                {errors.title && (
-                  <p className="text-error">{errors.title[0]}</p>
-                )}
               </div>
               <div className="form-control mb-4">
                 <label className="label">
@@ -202,8 +195,8 @@ export default function Posts() {
                   onChange={(e) =>
                     setFormData({ ...formData, body: e.target.value })
                   }
+                  required
                 ></textarea>
-                {errors.body && <p className="text-error">{errors.body[0]}</p>}
               </div>
               <div className="flex justify-end space-x-2">
                 <button
@@ -221,7 +214,7 @@ export default function Posts() {
           </div>
         </div>
       )}
-      {/* Delete Confirmation Modal */}
+
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">

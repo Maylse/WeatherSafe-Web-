@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState } from "react";
+import api from "../../api";
 
 export const AppContext = createContext();
 
@@ -9,17 +10,17 @@ export default function AppProvider({ children }) {
   async function getUser() {
     if (!token) return;
 
-    const res = await fetch("/api/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const data = await res.json();
-
-    if (res.ok) {
-      setUser(data); // Ensure data contains userType
-    } else {
+    try {
+      const response = await api.get("/api/user");
+      setUser(response.data); // Ensure response.data contains userType
+    } catch (error) {
+      console.error("Error fetching user:", error);
       setUser(null);
+      // Handle unauthorized (401) by clearing token
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem("token");
+        setToken(null);
+      }
     }
   }
 

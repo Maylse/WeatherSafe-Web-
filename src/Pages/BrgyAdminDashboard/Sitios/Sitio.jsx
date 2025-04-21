@@ -2,6 +2,7 @@ import { useContext, useEffect, useState, useRef } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { LoadScript, GoogleMap, Marker } from "@react-google-maps/api";
+import api from "../../../../api";
 
 const containerStyle = {
   width: "100%",
@@ -13,7 +14,7 @@ export default function Sitio() {
   const [selectedSitio, setSelectedSitio] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sitioToDelete, setSitioToDelete] = useState(null);
-  const { user, token } = useContext(AppContext);
+  const { user } = useContext(AppContext);
   const [sitios, setSitios] = useState([]);
   const [center, setCenter] = useState({
     lat: 10.378754, // Default center (Cebu coordinates)
@@ -55,7 +56,7 @@ export default function Sitio() {
           });
         },
         {
-          enableHighAccuracy: true, // This is the key change
+          enableHighAccuracy: true,
           timeout: 5000,
           maximumAge: 0,
         }
@@ -70,12 +71,12 @@ export default function Sitio() {
   };
 
   async function getSitios() {
-    const res = await fetch("/api/brgySitios", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (res.ok) setSitios(data.barangay_sitios);
+    try {
+      const response = await api.get("/api/brgySitios");
+      setSitios(response.data.barangay_sitios || []);
+    } catch (error) {
+      console.error("Error fetching sitios:", error);
+    }
   }
 
   const handleEdit = (sitio) => {
@@ -114,47 +115,43 @@ export default function Sitio() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setErrors([]);
 
     if (!formData.sitio_name.trim() || !formData.long || !formData.lat) {
       setErrors(["Sitio name and coordinates cannot be empty."]);
       return;
     }
 
-    const method = selectedSitio && selectedSitio.id ? "PUT" : "POST";
-    const endpoint = selectedSitio
-      ? `/api/brgySitios/${selectedSitio.id}`
-      : "/api/brgySitios";
-
     try {
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const method = selectedSitio ? "put" : "post";
+      const endpoint = selectedSitio
+        ? `/api/brgySitios/${selectedSitio.id}`
+        : "/api/brgySitios";
 
-      const data = await res.json();
+      const response = await api[method](endpoint, formData);
 
-      if (res.ok) {
-        setSitios((prevSitios) =>
-          selectedSitio
-            ? prevSitios.map((sitio) =>
-                sitio.id === selectedSitio.id ? data.barangay_sitio : sitio
-              )
-            : [data.barangay_sitio, ...prevSitios]
-        );
+      // Update local state
+      setSitios((prevSitios) =>
+        selectedSitio
+          ? prevSitios.map((sitio) =>
+              sitio.id === selectedSitio.id
+                ? response.data.barangay_sitio
+                : sitio
+            )
+          : [response.data.barangay_sitio, ...prevSitios]
+      );
 
-        setIsModalOpen(false);
-        setSelectedSitio(null);
-        setFormData({ sitio_name: "", long: "", lat: "" });
-        setSelectedLocation(null);
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      setIsModalOpen(false);
+      setSelectedSitio(null);
+      setFormData({ sitio_name: "", long: "", lat: "" });
+      setSelectedLocation(null);
     } catch (error) {
-      setErrors(["Something went wrong!"]);
+      console.error("Error saving sitio:", error);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors(["Something went wrong!"]);
+      }
     }
   };
 
@@ -163,37 +160,18 @@ export default function Sitio() {
     setIsDeleteModalOpen(true);
   };
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!sitioToDelete) return;
 
     try {
-      const res = await fetch(`/api/brgySitios/${sitioToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setSitios(sitios.filter((sitio) => sitio.id !== sitioToDelete.id));
-        setIsDeleteModalOpen(false);
-        console.log(data.message);
-      } else {
-        console.error("Error deleting sitio:", data.message || "Unknown error");
-      }
+      await api.delete(`/api/brgySitios/${sitioToDelete.id}`);
+      setSitios(sitios.filter((sitio) => sitio.id !== sitioToDelete.id));
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error("An error occurred while deleting the sitio:", error);
+      console.error("Error deleting sitio:", error);
     }
-  }
+  };
 
-  useEffect(() => {
-    getSitios();
-    getUserLocation(); // Get user's location when component mounts
-  }, []);
-
-  // Update the Add New Sitio button click handler
   const handleAddNewSitio = () => {
     setIsModalOpen(true);
     setSelectedSitio(null);
@@ -203,17 +181,19 @@ export default function Sitio() {
       lat: "",
     });
     setSelectedLocation(null);
-    getUserLocation(); // Get fresh location when opening modal
+    getUserLocation();
   };
+
+  useEffect(() => {
+    getSitios();
+    getUserLocation();
+  }, []);
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Sitios</h1>
 
-      <button
-        onClick={handleAddNewSitio} // Updated to use the new handler
-        className="btn btn-primary mb-4"
-      >
+      <button onClick={handleAddNewSitio} className="btn btn-primary mb-4">
         Add New Sitio
       </button>
 
@@ -363,7 +343,6 @@ export default function Sitio() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">

@@ -1,8 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../Context/AppContext";
+import api from "../../api";
 
 export default function Profile() {
-  const { token, user, setUser } = useContext(AppContext);
+  const { user, setUser } = useContext(AppContext);
   const [profileData, setProfileData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -21,29 +22,17 @@ export default function Profile() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await fetch("/api/user/profile", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-
-        const data = await response.json();
-        setProfileData(data.user);
+        const response = await api.get("/api/user/profile");
+        setProfileData(response.data.user);
         setFormData({
-          name: data.user.name,
-          email: data.user.email,
+          name: response.data.user.name,
+          email: response.data.user.email,
           current_password: "",
           new_password: "",
           new_password_confirmation: "",
-          profile: data.user.profile || "",
+          profile: response.data.user.profile || "",
         });
-        setPreviewImage(data.user.profile);
+        setPreviewImage(response.data.user.profile);
       } catch (error) {
         console.error("Error fetching profile:", error);
       }
@@ -52,19 +41,18 @@ export default function Profile() {
     if (user?.userType) {
       fetchProfile();
     }
-  }, [user, token]);
+  }, [user]);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result); // Update preview with new image
+        setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
-      setImageFile(file); // Store file for upload
+      setImageFile(file);
 
-      // If there's an existing image, delete it before uploading the new one
       if (formData.profile) {
         handleDeleteImage(formData.profile);
       }
@@ -74,23 +62,19 @@ export default function Profile() {
   const handleImageUpload = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "WeatherSafePreset"); // Ensure this preset exists in Cloudinary
+    formData.append("upload_preset", "WeatherSafePreset");
 
     try {
-      const response = await fetch(
+      const response = await api.post(
         "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Image upload failed");
-      }
-
-      const data = await response.json();
-      return data.secure_url; // The URL of the uploaded image
+      return response.data.secure_url;
     } catch (error) {
       console.error("Image upload failed:", error);
       return null;
@@ -99,52 +83,19 @@ export default function Profile() {
 
   const extractPublicId = (imageUrl) => {
     if (!imageUrl) return null;
-
-    // Remove Cloudinary base URL
     const urlParts = imageUrl.split("/");
-
-    // Find the index of 'upload' and ignore version numbers
     const uploadIndex = urlParts.findIndex((part) => part === "upload");
     if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) return null;
-
-    // Extract parts after 'upload' (excluding version)
-    const relevantParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' + version
-
-    // Join folder structure (if any) and filename without extension
-    const publicId = relevantParts.join("/").split(".")[0];
-
-    return publicId;
+    const relevantParts = urlParts.slice(uploadIndex + 2);
+    return relevantParts.join("/").split(".")[0];
   };
 
   const handleDeleteImage = async (imageUrl) => {
-    if (!imageUrl) return;
-
-    console.log("Image URL before extracting publicId:", imageUrl);
-
-    const publicId = extractPublicId(imageUrl); // Use the corrected function
-
-    console.log("Extracted Public ID:", publicId);
-
-    if (!publicId) {
-      console.error("Failed to extract a valid public ID.");
-      return;
-    }
+    const publicId = extractPublicId(imageUrl);
+    if (!publicId) return;
 
     try {
-      const response = await fetch("/api/delete-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ publicId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete image");
-      }
-
-      console.log("Previous image deleted successfully");
+      await api.post("/api/delete-image", { publicId });
     } catch (error) {
       console.error("Failed to delete previous image:", error);
     }
@@ -159,79 +110,57 @@ export default function Profile() {
     setLoading(true);
     setError(null);
 
-    if (imageFile) {
-      // Upload the new image and get the image URL (upload logic)
-      const imageUrl = await handleImageUpload(imageFile);
-      if (imageUrl) {
-        formData.profile = imageUrl;
-      } else {
-        alert("Failed to upload image.");
-        setLoading(false);
-        return;
-      }
-    }
-
-    const {
-      name,
-      email,
-      current_password,
-      new_password,
-      new_password_confirmation,
-      profile,
-    } = formData;
-
-    // Check if new password is provided, and if so, validate it
-    if (new_password && new_password !== new_password_confirmation) {
-      setError("New passwords do not match");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const bodyData = {
-        name,
-        email,
-        profile,
+      // Upload new image if selected
+      let updatedFormData = { ...formData };
+      if (imageFile) {
+        const imageUrl = await handleImageUpload(imageFile);
+        if (!imageUrl) throw new Error("Image upload failed");
+        updatedFormData.profile = imageUrl;
+      }
+
+      // Validate passwords if changing
+      if (updatedFormData.new_password) {
+        if (
+          updatedFormData.new_password !==
+          updatedFormData.new_password_confirmation
+        ) {
+          throw new Error("New passwords do not match");
+        }
+        if (!updatedFormData.current_password) {
+          throw new Error("Current password is required to change password");
+        }
+      }
+
+      // Prepare request data
+      const requestData = {
+        name: updatedFormData.name,
+        email: updatedFormData.email,
+        profile: updatedFormData.profile,
       };
 
-      // Add password fields only if provided
-      if (new_password) {
-        bodyData.current_password = current_password;
-        bodyData.new_password = new_password;
-        bodyData.new_password_confirmation = new_password_confirmation;
+      // Include password fields only if changing password
+      if (updatedFormData.new_password) {
+        requestData.current_password = updatedFormData.current_password;
+        requestData.new_password = updatedFormData.new_password;
+        requestData.new_password_confirmation =
+          updatedFormData.new_password_confirmation;
       }
 
-      const response = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(bodyData),
-      });
+      // Send update request
+      const response = await api.put("/api/user/profile", requestData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update profile");
-      }
-
-      alert("Profile updated successfully!");
-      setProfileData((prevData) => ({
-        ...prevData,
-        name,
-        email,
-        profile: formData.profile || prevData.profile,
-      }));
-      setUser((prevUser) => ({
-        ...prevUser,
-        name,
-        email,
-        profile: formData.profile || prevUser.profile,
-      }));
+      // Update state on success
+      setProfileData(response.data.user);
+      setUser(response.data.user);
       setIsModalOpen(false);
+      setPreviewImage(response.data.user.profile);
+      setImageFile(null);
     } catch (err) {
-      setError(err.message);
+      console.error("Error updating profile:", err);
+      setError(
+        err.response?.data?.message || err.message || "An error occurred"
+      );
     } finally {
       setLoading(false);
     }
@@ -263,8 +192,12 @@ export default function Profile() {
         <div className="modal modal-open">
           <div className="modal-box">
             <h2 className="text-xl font-bold mb-4">Update Profile</h2>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <div className="flex flex-col items-center gap-2">
+            {error && (
+              <div className="alert alert-error mb-4">
+                <span>{error}</span>
+              </div>
+            )}
+            <div className="flex flex-col items-center gap-2 mb-4">
               <label className="block text-sm font-medium text-gray-700">
                 Profile Picture
               </label>
@@ -304,8 +237,10 @@ export default function Profile() {
               />
             </div>
             <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="label">Name</label>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Name</span>
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -315,8 +250,10 @@ export default function Profile() {
                   required
                 />
               </div>
-              <div>
-                <label className="label">Email</label>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Email</span>
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -326,34 +263,46 @@ export default function Profile() {
                   required
                 />
               </div>
-              <div>
-                <label className="label">Current Password (Optional)</label>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Current Password</span>
+                  <span className="label-text-alt">
+                    (required to change password)
+                  </span>
+                </label>
                 <input
                   type="password"
                   name="current_password"
                   value={formData.current_password}
                   onChange={handleChange}
                   className="input input-bordered w-full"
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
-              <div>
-                <label className="label">New Password (Optional)</label>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">New Password</span>
+                </label>
                 <input
                   type="password"
                   name="new_password"
                   value={formData.new_password}
                   onChange={handleChange}
                   className="input input-bordered w-full"
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
-              <div>
-                <label className="label">Confirm New Password (Optional)</label>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Confirm New Password</span>
+                </label>
                 <input
                   type="password"
                   name="new_password_confirmation"
                   value={formData.new_password_confirmation}
                   onChange={handleChange}
                   className="input input-bordered w-full"
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
               <div className="modal-action">
@@ -362,7 +311,14 @@ export default function Profile() {
                   className="btn btn-primary"
                   disabled={loading}
                 >
-                  {loading ? "Saving..." : "Save Changes"}
+                  {loading ? (
+                    <>
+                      <span className="loading loading-spinner"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </button>
                 <button
                   type="button"

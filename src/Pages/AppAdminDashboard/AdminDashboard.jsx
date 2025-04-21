@@ -1,8 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
+import api from "../../../api";
 
 export default function AdminDashboard({ setSelected }) {
-  const { user, token } = useContext(AppContext);
+  const { user } = useContext(AppContext);
   const [stats, setStats] = useState({
     barangays: 0,
     barangayAdmins: 0,
@@ -15,7 +16,7 @@ export default function AdminDashboard({ setSelected }) {
     if (user?.userType === "app_admin") {
       fetchAllStats();
     }
-  }, [user, token]);
+  }, [user]);
 
   async function fetchAllStats() {
     try {
@@ -48,17 +49,14 @@ export default function AdminDashboard({ setSelected }) {
 
   async function fetchCount(endpoint, dataKey) {
     try {
-      const res = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get(endpoint);
 
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-      const data = await res.json();
+      // Axios wraps the response data in a data property
+      const responseData = response.data;
 
       // Handle the count based on the endpoint's data structure
-      if (data[dataKey] && Array.isArray(data[dataKey])) {
-        return data[dataKey].length;
+      if (responseData[dataKey] && Array.isArray(responseData[dataKey])) {
+        return responseData[dataKey].length;
       }
 
       return 0;
@@ -68,6 +66,7 @@ export default function AdminDashboard({ setSelected }) {
     }
   }
 
+  // ... rest of your component remains the same ...
   const handleCardClick = (componentName) => {
     setSelected(componentName);
   };

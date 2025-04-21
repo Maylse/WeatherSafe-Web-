@@ -1,13 +1,14 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { useNavigate } from "react-router-dom";
+import api from "../../../../api";
 
 export default function Barangays() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [barangayToDelete, setBarangayToDelete] = useState(null);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
-  const { user, token } = useContext(AppContext);
+  const { user } = useContext(AppContext);
   const [barangays, setBarangays] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -16,19 +17,15 @@ export default function Barangays() {
     city: "",
   });
 
+  // Fetch barangays using Axios
   async function getBarangays() {
-    const res = await fetch("/api/barangays", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const data = await res.json();
-
-    if (res.ok) {
-      setBarangays(data.barangays || []);
-    } else {
-      setErrors(["Failed to fetch barangays"]);
+    try {
+      const response = await api.get("/api/barangays");
+      setBarangays(response.data.barangays || []);
+      setErrors([]);
+    } catch (error) {
+      console.error("Error fetching barangays:", error);
+      setErrors(["Failed to fetch Barangays"]);
     }
   }
 
@@ -43,32 +40,29 @@ export default function Barangays() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const method = selectedBarangay ? "PUT" : "POST";
-    const endpoint = selectedBarangay
-      ? `/api/barangays/${selectedBarangay.id}`
-      : "/api/barangays";
+    setErrors([]);
 
     try {
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      const method = selectedBarangay ? "put" : "post";
+      const endpoint = selectedBarangay
+        ? `/api/barangays/${selectedBarangay.id}`
+        : "/api/barangays";
 
-      if (res.ok) {
-        await getBarangays();
-        setIsModalOpen(false);
-        setSelectedBarangay(null);
-        setFormData({ brgy_name: "", city: "" });
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      // Use the api instance for the request
+      const response = await api[method](endpoint, formData);
+
+      // On success
+      await getBarangays();
+      setIsModalOpen(false);
+      setSelectedBarangay(null);
+      setFormData({ brgy_name: "", city: "" });
     } catch (error) {
-      setErrors(["Something went wrong!"]);
+      console.error("Error saving barangay:", error);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors(["Something went wrong!"]);
+      }
     }
   };
 
@@ -77,36 +71,20 @@ export default function Barangays() {
     setIsDeleteModalOpen(true);
   };
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!barangayToDelete) return;
 
     try {
-      const res = await fetch(`/api/barangays/${barangayToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // Use the api instance for the request
+      await api.delete(`/api/barangays/${barangayToDelete.id}`);
 
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // ✅ Remove the barangay from the list
-        setBarangays(
-          barangays.filter((barangay) => barangay.id !== barangayToDelete.id)
-        );
-        setIsDeleteModalOpen(false);
-        console.log(data.message); // Debugging: Ensure successful message logs
-      } else {
-        console.error(
-          "Error deleting barangay:",
-          data.message || "Unknown error"
-        );
-      }
+      // Update local state to remove the deleted barangay
+      setBarangays(barangays.filter((b) => b.id !== barangayToDelete.id));
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error("An error occurred while deleting a barangay:", error);
+      console.error("Error deleting barangay:", error);
     }
-  }
+  };
 
   useEffect(() => {
     getBarangays();
@@ -195,6 +173,7 @@ export default function Barangays() {
                   onChange={(e) =>
                     setFormData({ ...formData, brgy_name: e.target.value })
                   }
+                  required
                 />
                 {errors.brgy_name && (
                   <p className="text-error">{errors.brgy_name[0]}</p>
@@ -209,6 +188,7 @@ export default function Barangays() {
                   onChange={(e) =>
                     setFormData({ ...formData, city: e.target.value })
                   }
+                  required
                 />
                 {errors.city && <p className="text-error">{errors.city[0]}</p>}
               </label>
@@ -228,7 +208,7 @@ export default function Barangays() {
           </div>
         </div>
       )}
-      {/* Delete Confirmation Modal */}
+
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">

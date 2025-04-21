@@ -6,20 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: "dist",
-    assetsDir: "assets",
     emptyOutDir: true,
   },
-  publicDir: "public", // Ensure this is set
-  // server: {
-  //   proxy: {
-  //     "/api": {
-  //       target: "https://weathersafeapi.onrender.com",
-  //       changeOrigin: true,
-  //       headers: {
-  //         Accept: "application/json",
-  //         "Content-Type": "application/json",
-  //       },
-  //     },
-  //   },
-  // },
+  // Remove the entire server.proxy configuration
 });

@@ -4,7 +4,11 @@ import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase";
-import axios from "axios";
+
+import api from "../../../api";
+
+//SERVER URL
+const serverUrl = import.meta.env.VITE_API_BASE_URL;
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -39,18 +43,12 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      // Proper Axios POST request
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/login`,
-        { ...formData, fcm_token: fcmToken },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          withCredentials: true,
-        }
-      );
+      console.log("fcm token: ", fcmToken);
+      // Use the centralized api instance
+      const { data } = await api.post("/api/login", {
+        ...formData,
+        fcm_token: fcmToken,
+      });
 
       if (data.errors) {
         setErrors(data.errors);
