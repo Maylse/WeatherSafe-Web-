@@ -11,4 +11,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   publicDir: "public", // Ensure this is set
+  server: {
+    proxy: {
+      "/api": "https://weathersafeapi.onrender.com",
+    },
+  },
 });
