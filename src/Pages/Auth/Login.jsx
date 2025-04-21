@@ -4,7 +4,6 @@ import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
-import axios from "axios";
 
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -41,7 +40,7 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = axios.post(`${apiUrl}/api/login`, {
+      const res = await fetch(`${apiUrl}/api/login`, {
         method: "POST",
         body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
         headers: { "Content-Type": "application/json" },
