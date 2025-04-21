@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.6",
-    "axios": "^1.7.9",
+    "axios": "^1.8.4",
     "daisyui": "^4.12.23",
     "firebase": "^11.4.0",
     "lucide-react": "^0.479.0",
