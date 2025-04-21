@@ -38,11 +38,14 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = await fetch("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/login`,
+        {
+          method: "POST",
+          body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       const data = await res.json();
 
