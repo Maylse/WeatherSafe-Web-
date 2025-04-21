@@ -41,11 +41,21 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      // Using axios instead of fetch
-      const { data } = await axios.post(`${apiUrl}/api/login`, {
-        ...formData,
-        fcm_token: fcmToken,
-      });
+      // Using axios with proper CORS configuration
+      const { data } = await axios.post(
+        `${apiUrl}/api/login`,
+        {
+          ...formData,
+          fcm_token: fcmToken,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          withCredentials: false, // Only set to true if your API uses cookies/sessions
+        }
+      );
 
       if (data.errors) {
         setErrors(data.errors);
@@ -73,9 +83,22 @@ export default function Login() {
     } catch (error) {
       console.error("Login error:", error);
       // Handle axios error response
-      if (error.response && error.response.data && error.response.data.errors) {
-        setErrors(error.response.data.errors);
+      if (error.response) {
+        // Server responded with error status (4xx, 5xx)
+        if (error.response.data?.errors) {
+          setErrors(error.response.data.errors);
+        } else {
+          setErrors({
+            general: [error.response.data?.message || "Login failed"],
+          });
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        setErrors({
+          general: ["Network error. Please check your connection."],
+        });
       } else {
+        // Other errors
         setErrors({ general: ["Something went wrong. Please try again."] });
       }
     } finally {
