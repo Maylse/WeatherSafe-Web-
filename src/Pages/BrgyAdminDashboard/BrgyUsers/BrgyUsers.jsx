@@ -2,6 +2,8 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
 export default function BrgyUsers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +31,7 @@ export default function BrgyUsers() {
 
   async function getBrgyUsers() {
     try {
-      const res = await fetch("/api/barangay-user", {
+      const res = await fetch(`${apiUrl}/api/barangay-user`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -121,7 +123,7 @@ export default function BrgyUsers() {
     }
 
     try {
-      const response = await fetch("/api/delete-image", {
+      const response = await fetch(`${apiUrl}/api/delete-image`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -185,8 +187,8 @@ export default function BrgyUsers() {
 
     const method = selectedBrgyUser ? "PUT" : "POST"; // Use PUT if editing, POST if creating
     const endpoint = selectedBrgyUser
-      ? `/api/barangay-user/${selectedBrgyUser.id}`
-      : "/api/barangay-user"; // Adjust endpoint based on the action (create vs update)
+      ? `${apiUrl}/api/barangay-user/${selectedBrgyUser.id}`
+      : `${apiUrl}/api/barangay-user`; // Adjust endpoint based on the action (create vs update)
 
     try {
       const res = await fetch(endpoint, {
@@ -239,12 +241,15 @@ export default function BrgyUsers() {
     if (!brgyUserToDelete) return;
 
     try {
-      const res = await fetch(`/api/barangay-user/${brgyUserToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `${apiUrl}/api/barangay-user/${brgyUserToDelete.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await res.json(); // Parse the JSON response
 
@@ -268,7 +273,7 @@ export default function BrgyUsers() {
 
     try {
       const res = await fetch(
-        `/api/barangay-user/${brgyUserToRestore.id}/restore`,
+        `${apiUrl}/api/barangay-user/${brgyUserToRestore.id}/restore`,
         {
           method: "PATCH",
           headers: {

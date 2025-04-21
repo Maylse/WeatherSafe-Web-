@@ -3,7 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
-import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
+import { messaging } from "../../firebase";
+import axios from "axios"; // Import axios
+
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -38,13 +41,21 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = await fetch("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const data = await res.json();
+      // Using axios with proper CORS configuration
+      const { data } = await axios.post(
+        `${apiUrl}/api/login`,
+        {
+          ...formData,
+          fcm_token: fcmToken,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          withCredentials: false, // Only set to true if your API uses cookies/sessions
+        }
+      );
 
       if (data.errors) {
         setErrors(data.errors);
@@ -71,18 +82,37 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrors({ general: ["Something went wrong. Please try again."] });
+      // Handle axios error response
+      if (error.response) {
+        // Server responded with error status (4xx, 5xx)
+        if (error.response.data?.errors) {
+          setErrors(error.response.data.errors);
+        } else {
+          setErrors({
+            general: [error.response.data?.message || "Login failed"],
+          });
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        setErrors({
+          general: ["Network error. Please check your connection."],
+        });
+      } else {
+        // Other errors
+        setErrors({ general: ["Something went wrong. Please try again."] });
+      }
     } finally {
       setIsLoading(false);
     }
   }
-  // Helper function
+
   function clearAuthData() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
+
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />

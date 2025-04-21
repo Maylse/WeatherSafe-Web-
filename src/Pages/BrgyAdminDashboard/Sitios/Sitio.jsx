@@ -3,6 +3,8 @@ import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { LoadScript, GoogleMap, Marker } from "@react-google-maps/api";
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
 const containerStyle = {
   width: "100%",
   height: "400px",
@@ -70,7 +72,7 @@ export default function Sitio() {
   };
 
   async function getSitios() {
-    const res = await fetch("/api/brgySitios", {
+    const res = await fetch(`${apiUrl}/api/brgySitios`, {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -122,8 +124,8 @@ export default function Sitio() {
 
     const method = selectedSitio && selectedSitio.id ? "PUT" : "POST";
     const endpoint = selectedSitio
-      ? `/api/brgySitios/${selectedSitio.id}`
-      : "/api/brgySitios";
+      ? `${apiUrl}/api/brgySitios/${selectedSitio.id}`
+      : `${apiUrl}/api/brgySitios`;
 
     try {
       const res = await fetch(endpoint, {
@@ -167,7 +169,7 @@ export default function Sitio() {
     if (!sitioToDelete) return;
 
     try {
-      const res = await fetch(`/api/brgySitios/${sitioToDelete.id}`, {
+      const res = await fetch(`${apiUrl}/api/brgySitios/${sitioToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
