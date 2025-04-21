@@ -11,7 +11,7 @@ export default function App() {
     // Register the Firebase Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/firebase-messaging-sw.js")
+        .register(`${import.meta.env.BASE_URL}firebase-messaging-sw.js`)
         .then((registration) => {
           console.log("Service Worker registered:", registration);
           return requestNotificationPermission();
