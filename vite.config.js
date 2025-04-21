@@ -11,17 +11,4 @@ export default defineConfig({
     emptyOutDir: true,
   },
   publicDir: "public", // Ensure this is set
-  server: {
-    proxy: {
-      "/api": {
-        target: "https://weathersafeapi.onrender.com",
-        // target: "http://192.168.254.154:8000",
-        changeOrigin: true,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      },
-    },
-  },
 });

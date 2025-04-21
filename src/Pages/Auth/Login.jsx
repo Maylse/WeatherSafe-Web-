@@ -5,6 +5,8 @@ import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = await fetch("/api/login", {
+      const res = await fetch(`${apiUrl}/api/login`, {
         method: "POST",
         body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
         headers: { "Content-Type": "application/json" },

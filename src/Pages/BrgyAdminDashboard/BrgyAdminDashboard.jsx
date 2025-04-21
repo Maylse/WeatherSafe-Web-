@@ -1,6 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
 
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
 export default function BarangayAdminDashboard({ setSelected }) {
   const { user, token } = useContext(AppContext);
 
@@ -23,8 +25,8 @@ export default function BarangayAdminDashboard({ setSelected }) {
       setStats((prev) => ({ ...prev, loading: true, error: null }));
 
       const [barangayUsersCount, communityUsersCount] = await Promise.all([
-        fetchCount("api/barangay-user", "barangay_users"),
-        fetchCount("api/community-user", "community_users"),
+        fetchCount(`${apiUrl}/api/barangay-user"`, "barangay_users"),
+        fetchCount(`${apiUrl}/api/community-user`, "community_users"),
       ]);
 
       setStats({
