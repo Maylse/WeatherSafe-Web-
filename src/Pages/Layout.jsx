@@ -11,6 +11,7 @@ import BarangayUsers from "../Pages/BrgyAdminDashboard/BrgyUsers/BrgyUsers";
 import CommunityUsers from "../Pages/BrgyAdminDashboard/CommunityUsers/CommunityUsers";
 import Logo from "../assets/logo.png";
 import Profile from "./Profile";
+import Sitio from "./BrgyAdminDashboard/Sitios/Sitio";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -105,6 +106,7 @@ export default function Layout() {
         },
         { label: "Barangay Users", component: <BarangayUsers /> },
         { label: "Community Users", component: <CommunityUsers /> },
+        { label: "Sitios", component: <Sitio /> },
       ];
     }
     return [];
