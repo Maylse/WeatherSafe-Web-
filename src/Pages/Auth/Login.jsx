@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
-import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
+import { messaging } from "../../firebase";
+import axios from "axios";
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -38,21 +39,22 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = await fetch(
+      // Proper Axios POST request
+      const { data } = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/login`,
+        { ...formData, fcm_token: fcmToken },
         {
-          method: "POST",
-          body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          withCredentials: false,
         }
       );
-
-      const data = await res.json();
 
       if (data.errors) {
         setErrors(data.errors);
       } else if (data.user) {
-        // Check allowed user types
         const allowedUserTypes = ["app_admin", "barangay_admin"];
 
         if (data.user.status === "INACTIVE") {
@@ -64,7 +66,6 @@ export default function Login() {
           });
           clearAuthData();
         } else {
-          // Successful login for allowed user types
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           setToken(data.token);
@@ -74,18 +75,36 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrors({ general: ["Something went wrong. Please try again."] });
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.data?.errors) {
+          setErrors(error.response.data.errors);
+        } else {
+          setErrors({
+            general: [error.response.data?.message || "Login failed"],
+          });
+        }
+      } else if (error.request) {
+        // Request was made but no response
+        setErrors({
+          general: ["Network error. Please check your connection."],
+        });
+      } else {
+        // Other errors
+        setErrors({ general: ["Something went wrong. Please try again."] });
+      }
     } finally {
       setIsLoading(false);
     }
   }
-  // Helper function
+
   function clearAuthData() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
+
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />
