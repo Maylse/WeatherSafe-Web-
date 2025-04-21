@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { useNavigate } from "react-router-dom";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
 export default function Barangays() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -18,7 +17,7 @@ export default function Barangays() {
   });
 
   async function getBarangays() {
-    const res = await fetch(`${apiUrl}/api/barangays`, {
+    const res = await fetch("/api/barangays", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -46,8 +45,8 @@ export default function Barangays() {
     e.preventDefault();
     const method = selectedBarangay ? "PUT" : "POST";
     const endpoint = selectedBarangay
-      ? `${apiUrl}/api/barangays/${selectedBarangay.id}`
-      : `${apiUrl}/api/barangays`;
+      ? `/api/barangays/${selectedBarangay.id}`
+      : "/api/barangays";
 
     try {
       const res = await fetch(endpoint, {
@@ -82,15 +81,12 @@ export default function Barangays() {
     if (!barangayToDelete) return;
 
     try {
-      const res = await fetch(
-        `${apiUrl}/api/barangays/${barangayToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const res = await fetch(`/api/barangays/${barangayToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await res.json(); // Parse the JSON response
 

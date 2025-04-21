@@ -2,8 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function CommunityUsers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +22,7 @@ export default function CommunityUsers() {
 
   async function getCommunityUsers() {
     try {
-      const res = await fetch(`${apiUrl}/api/community-user`, {
+      const res = await fetch("/api/community-user", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -59,7 +57,7 @@ export default function CommunityUsers() {
     const { email, password, password_confirmation } = formData;
 
     const method = "PUT"; // Use PUT if editing, POST if creating
-    const endpoint = `${apiUrl}/api/community-user/${selectedCommunityUser.id}`;
+    const endpoint = `/api/community-user/${selectedCommunityUser.id}`;
 
     try {
       const res = await fetch(endpoint, {
@@ -115,7 +113,7 @@ export default function CommunityUsers() {
 
     try {
       const res = await fetch(
-        `${apiUrl}/api/community-user/${communityUserToDelete.id}`,
+        `/api/community-user/${communityUserToDelete.id}`,
         {
           method: "DELETE",
           headers: {
@@ -149,7 +147,7 @@ export default function CommunityUsers() {
 
     try {
       const res = await fetch(
-        `${apiUrl}/api/community-user/${communityUserToRestore.id}/restore`,
+        `/api/community-user/${communityUserToRestore.id}/restore`,
         {
           method: "PATCH",
           headers: {

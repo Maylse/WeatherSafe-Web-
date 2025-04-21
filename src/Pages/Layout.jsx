@@ -13,8 +13,6 @@ import Logo from "../assets/logo.png";
 import Profile from "./Profile";
 import Sitio from "./BrgyAdminDashboard/Sitios/Sitio";
 
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
   const [notifications, setNotifications] = useState([]);
@@ -59,7 +57,7 @@ export default function Layout() {
   }, []);
 
   async function fetchNotifications() {
-    const res = await fetch(`${apiUrl}/api/notifications`, {
+    const res = await fetch("/api/notifications", {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -68,7 +66,7 @@ export default function Layout() {
   }
 
   async function markAllAsRead() {
-    await fetch(`${apiUrl}/api/notifications/mark-all-as-read`, {
+    await fetch("/api/notifications/mark-all-as-read", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -77,7 +75,7 @@ export default function Layout() {
 
   async function handleLogout(e) {
     e.preventDefault();
-    await fetch(`${apiUrl}/api/logout`, {
+    await fetch("/api/logout", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
