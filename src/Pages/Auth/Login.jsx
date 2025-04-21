@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
-import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
+import { messaging } from "../../firebase";
+import axios from "axios"; // Import axios
 
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -40,13 +41,11 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      const res = await fetch(`${apiUrl}/api/login`, {
-        method: "POST",
-        body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
-        headers: { "Content-Type": "application/json" },
+      // Using axios instead of fetch
+      const { data } = await axios.post(`${apiUrl}/api/login`, {
+        ...formData,
+        fcm_token: fcmToken,
       });
-
-      const data = await res.json();
 
       if (data.errors) {
         setErrors(data.errors);
@@ -73,18 +72,24 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrors({ general: ["Something went wrong. Please try again."] });
+      // Handle axios error response
+      if (error.response && error.response.data && error.response.data.errors) {
+        setErrors(error.response.data.errors);
+      } else {
+        setErrors({ general: ["Something went wrong. Please try again."] });
+      }
     } finally {
       setIsLoading(false);
     }
   }
-  // Helper function
+
   function clearAuthData() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
+
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />
