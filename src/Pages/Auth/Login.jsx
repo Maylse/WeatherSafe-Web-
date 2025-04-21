@@ -4,7 +4,9 @@ import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase";
-import axios from "axios";
+import axios from "axios"; // Import axios
+
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -39,8 +41,8 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      // Using proxy route (/api) instead of direct API URL
-      const { data } = await axios.post("/api/login", {
+      // Using axios instead of fetch
+      const { data } = await axios.post(`${apiUrl}/api/login`, {
         ...formData,
         fcm_token: fcmToken,
       });
