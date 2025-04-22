@@ -1,9 +1,12 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
-import api from "../../../api";
+
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function BarangayAdminDashboard({ setSelected }) {
-  const { user } = useContext(AppContext);
+  const { user, token } = useContext(AppContext); // include token
   const [stats, setStats] = useState({
     barangayUsersCount: 0,
     communityUsersCount: 0,
@@ -21,9 +24,19 @@ export default function BarangayAdminDashboard({ setSelected }) {
     try {
       setStats((prev) => ({ ...prev, loading: true, error: null }));
 
-      // Fetch all counts in parallel using Axios
+      // Set headers with Authorization
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+
+      // Fetch all counts in parallel using Axios with token
       const [barangayUsersResponse, communityUsersResponse] = await Promise.all(
-        [api.get("/api/barangay-user"), api.get("/api/community-user")]
+        [
+          axios.get(`${serverUrl}/api/barangay-user`, config),
+          axios.get(`${serverUrl}/api/community-user`, config),
+        ]
       );
 
       setStats({

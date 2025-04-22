@@ -1,14 +1,17 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { useNavigate } from "react-router-dom";
-import api from "../../../../api";
+
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function Barangays() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [barangayToDelete, setBarangayToDelete] = useState(null);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
-  const { user } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [barangays, setBarangays] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -20,7 +23,11 @@ export default function Barangays() {
   // Fetch barangays using Axios
   async function getBarangays() {
     try {
-      const response = await api.get("/api/barangays");
+      const response = await axios.get(`${serverUrl}/api/barangays`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setBarangays(response.data.barangays || []);
       setErrors([]);
     } catch (error) {
@@ -45,11 +52,14 @@ export default function Barangays() {
     try {
       const method = selectedBarangay ? "put" : "post";
       const endpoint = selectedBarangay
-        ? `/api/barangays/${selectedBarangay.id}`
-        : "/api/barangays";
+        ? `${serverUrl}/api/barangays/${selectedBarangay.id}`
+        : `${serverUrl}/api/barangays`;
 
-      // Use the api instance for the request
-      const response = await api[method](endpoint, formData);
+      const response = await axios[method](endpoint, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // On success
       await getBarangays();
@@ -76,7 +86,11 @@ export default function Barangays() {
 
     try {
       // Use the api instance for the request
-      await api.delete(`/api/barangays/${barangayToDelete.id}`);
+      await axios.delete(`${serverUrl}/api/barangays/${barangayToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Update local state to remove the deleted barangay
       setBarangays(barangays.filter((b) => b.id !== barangayToDelete.id));
@@ -87,8 +101,11 @@ export default function Barangays() {
   };
 
   useEffect(() => {
-    getBarangays();
-  }, []);
+    if (token) {
+      // Only fetch if token exists
+      getBarangays();
+    }
+  }, [token]);
 
   return (
     <div className="p-6">

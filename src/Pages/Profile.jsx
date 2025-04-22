@@ -1,9 +1,11 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../Context/AppContext";
-import api from "../../api";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function Profile() {
-  const { user, setUser } = useContext(AppContext);
+  const { user, setUser, token } = useContext(AppContext);
   const [profileData, setProfileData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,7 +24,12 @@ export default function Profile() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await api.get("/api/user/profile");
+        const response = await axios.get(`${serverUrl}/api/user/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         setProfileData(response.data.user);
         setFormData({
           name: response.data.user.name,
@@ -65,7 +72,7 @@ export default function Profile() {
     formData.append("upload_preset", "WeatherSafePreset");
 
     try {
-      const response = await api.post(
+      const response = await axios.post(
         "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
         formData,
         {
@@ -95,7 +102,7 @@ export default function Profile() {
     if (!publicId) return;
 
     try {
-      await api.post("/api/delete-image", { publicId });
+      await axios.post(`${serverUrl}/api/delete-image`, { publicId });
     } catch (error) {
       console.error("Failed to delete previous image:", error);
     }
@@ -147,8 +154,15 @@ export default function Profile() {
           updatedFormData.new_password_confirmation;
       }
 
-      // Send update request
-      const response = await api.put("/api/user/profile", requestData);
+      const response = await axios.put(
+        `${serverUrl}/api/user/profile`,
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       // Update state on success
       setProfileData(response.data.user);

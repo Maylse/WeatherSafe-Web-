@@ -2,7 +2,8 @@ import { useContext, useEffect, useState, useRef } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { LoadScript, GoogleMap, Marker } from "@react-google-maps/api";
-import api from "../../../../api";
+import axios from "axios";
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 const containerStyle = {
   width: "100%",
@@ -14,7 +15,7 @@ export default function Sitio() {
   const [selectedSitio, setSelectedSitio] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [sitioToDelete, setSitioToDelete] = useState(null);
-  const { user } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [sitios, setSitios] = useState([]);
   const [center, setCenter] = useState({
     lat: 10.378754, // Default center (Cebu coordinates)
@@ -70,9 +71,14 @@ export default function Sitio() {
     }
   };
 
+  // Fetch sitios
   async function getSitios() {
     try {
-      const response = await api.get("/api/brgySitios");
+      const response = await axios.get(`${serverUrl}/api/brgySitios`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setSitios(response.data.barangay_sitios || []);
     } catch (error) {
       console.error("Error fetching sitios:", error);
@@ -125,10 +131,14 @@ export default function Sitio() {
     try {
       const method = selectedSitio ? "put" : "post";
       const endpoint = selectedSitio
-        ? `/api/brgySitios/${selectedSitio.id}`
-        : "/api/brgySitios";
+        ? `${serverUrl}}/api/brgySitios/${selectedSitio.id}`
+        : `${serverUrl}/api/brgySitios`;
 
-      const response = await api[method](endpoint, formData);
+      const response = await axios[method](endpoint, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Update local state
       setSitios((prevSitios) =>
@@ -160,11 +170,16 @@ export default function Sitio() {
     setIsDeleteModalOpen(true);
   };
 
+  // Delete sitio
   const confirmDelete = async () => {
     if (!sitioToDelete) return;
 
     try {
-      await api.delete(`/api/brgySitios/${sitioToDelete.id}`);
+      await axios.delete(`${serverUrl}/api/brgySitios/${sitioToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setSitios(sitios.filter((sitio) => sitio.id !== sitioToDelete.id));
       setIsDeleteModalOpen(false);
     } catch (error) {

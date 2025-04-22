@@ -1,14 +1,16 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "/src/Context/AppContext";
 import { useNavigate } from "react-router-dom";
-import api from "../../../../api";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function Posts() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
-  const { user } = useContext(AppContext); // Token is handled by api.js
+  const { user, token } = useContext(AppContext);
   const [posts, setPosts] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -17,7 +19,11 @@ export default function Posts() {
   // Fetch posts using Axios
   async function getPosts() {
     try {
-      const response = await api.get("/api/posts");
+      const response = await axios.get(`${serverUrl}/api/posts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setPosts(response.data.posts || []);
       setErrors([]);
     } catch (error) {
@@ -47,10 +53,14 @@ export default function Posts() {
     try {
       const method = selectedPost ? "put" : "post";
       const endpoint = selectedPost
-        ? `/api/posts/${selectedPost.id}`
-        : "/api/posts";
+        ? `${serverUrl}/api/posts/${selectedPost.id}`
+        : `${serverUrl}/api/posts`;
 
-      const response = await api[method](endpoint, formData);
+      const response = await axios[method](endpoint, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Update local state
       setPosts((prevPosts) =>
@@ -83,7 +93,11 @@ export default function Posts() {
     if (!postToDelete) return;
 
     try {
-      await api.delete(`/api/posts/${postToDelete.id}`);
+      await axios.delete(`${serverUrl}/api/posts/${postToDelete.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // Update local state
       setPosts(posts.filter((post) => post.id !== postToDelete.id));

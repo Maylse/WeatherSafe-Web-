@@ -1,7 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
-import api from "../../../../api";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function CommunityUsers() {
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ export default function CommunityUsers() {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [communityUserToRestore, setCommunityUserToRestore] = useState(null);
   const [selectedCommunityUser, setSelectedCommunityUser] = useState(null);
-  const { user } = useContext(AppContext); // Token is handled by api.js
+  const { user, token } = useContext(AppContext); // Token is handled by api.js
   const [communityUsers, setCommunityUsers] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -25,7 +27,11 @@ export default function CommunityUsers() {
   async function getCommunityUsers() {
     try {
       setLoading(true);
-      const response = await api.get("/api/community-user");
+      const response = await axios.get(`${serverUrl}/api/community-user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setCommunityUsers(response.data.community_users || []);
       setErrors([]);
     } catch (error) {
@@ -58,12 +64,17 @@ export default function CommunityUsers() {
         throw new Error("Passwords do not match");
       }
 
-      const response = await api.put(
-        `/api/community-user/${selectedCommunityUser.id}`,
+      const response = await axios.put(
+        `${serverUrl}/api/community-user/${selectedCommunityUser.id}`,
         {
           email,
           password,
           password_confirmation,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
@@ -105,7 +116,14 @@ export default function CommunityUsers() {
     if (!communityUserToDelete) return;
 
     try {
-      await api.delete(`/api/community-user/${communityUserToDelete.id}`);
+      await axios.delete(
+        `${serverUrl}/api/community-user/${communityUserToDelete.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       await getCommunityUsers();
       setIsDeleteModalOpen(false);
     } catch (error) {
@@ -117,8 +135,14 @@ export default function CommunityUsers() {
     if (!communityUserToRestore) return;
 
     try {
-      await api.patch(
-        `/api/community-user/${communityUserToRestore.id}/restore`
+      await axios.patch(
+        `${serverUrl}/api/community-user/${communityUserToRestore.id}/restore`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       await getCommunityUsers();
       setIsRestoreModalOpen(false);

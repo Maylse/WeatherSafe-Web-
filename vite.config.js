@@ -8,5 +8,4 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
   },
-  // Remove the entire server.proxy configuration
 });

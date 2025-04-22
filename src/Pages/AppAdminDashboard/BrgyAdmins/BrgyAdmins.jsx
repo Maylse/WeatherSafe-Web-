@@ -1,7 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
-import api from "../../../../api";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
@@ -12,7 +14,7 @@ export default function BrgyAdmins() {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [brgyAdminToRestore, setBrgyAdminToRestore] = useState(null);
   const [selectedBrgyAdmin, setSelectedBrgyAdmin] = useState(null);
-  const { user } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [brgyAdmins, setBrgyAdmins] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -30,7 +32,11 @@ export default function BrgyAdmins() {
   async function getBrgyAdmins() {
     try {
       setLoading(true);
-      const response = await api.get("/api/barangay-admins");
+      const response = await axios.get(`${serverUrl}/api/barangay-admins`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setBrgyAdmins(response.data.barangay_admins || []);
       setErrors([]);
     } catch (error) {
@@ -59,7 +65,7 @@ export default function BrgyAdmins() {
     formData.append("upload_preset", "WeatherSafePreset");
 
     try {
-      const response = await api.post(
+      const response = await axios.post(
         "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
         formData,
         {
@@ -89,7 +95,16 @@ export default function BrgyAdmins() {
     if (!publicId) return;
 
     try {
-      await api.post("/api/delete-image", { publicId });
+      await axios.post(
+        `${serverUrl}/api/delete-image`,
+        { publicId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       console.log("Previous image deleted successfully");
     } catch (error) {
       console.error("Failed to delete previous image:", error);
@@ -131,10 +146,14 @@ export default function BrgyAdmins() {
       // Prepare the API call
       const method = selectedBrgyAdmin ? "put" : "post";
       const endpoint = selectedBrgyAdmin
-        ? `/api/barangay-admins/${selectedBrgyAdmin.id}`
-        : "/api/barangay-admins";
+        ? `${serverUrl}/api/barangay-admins/${selectedBrgyAdmin.id}`
+        : `${serverUrl}/api/barangay-admins`;
 
-      const response = await api[method](endpoint, updatedFormData);
+      const response = await axios[method](endpoint, updatedFormData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       // On success
       await getBrgyAdmins();
@@ -170,7 +189,15 @@ export default function BrgyAdmins() {
     if (!brgyAdminToDelete) return;
 
     try {
-      await api.delete(`/api/barangay-admins/${brgyAdminToDelete.id}`);
+      await axios.delete(
+        `${serverUrl}/api/barangay-admins/${brgyAdminToDelete.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       await getBrgyAdmins();
       setIsDeleteModalOpen(false);
     } catch (error) {
@@ -182,7 +209,16 @@ export default function BrgyAdmins() {
     if (!brgyAdminToRestore) return;
 
     try {
-      await api.patch(`/api/barangay-admins/${brgyAdminToRestore.id}/restore`);
+      await axios.patch(
+        `${serverUrl}/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       await getBrgyAdmins();
       setIsRestoreModalOpen(false);
     } catch (error) {

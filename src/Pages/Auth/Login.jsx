@@ -4,11 +4,7 @@ import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../../firebase";
-
-import api from "../../../api";
-
-//SERVER URL
-const serverUrl = import.meta.env.VITE_API_BASE_URL;
+import axios from "axios";
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -18,17 +14,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
+
   async function requestFcmToken() {
     try {
       const fcmToken = await getToken(messaging, {
         vapidKey:
           "BE53qXL30ywUtx63VkQZVgt37Bk3eaNdB6K6WQ3T70cBQgKx89Gcs2gv-x1T5Kya6QXFCuFy_-rcM0rVUu5HgCg",
       });
-      if (!fcmToken) {
-        console.warn("No FCM token received.");
-        return null;
-      }
-      return fcmToken;
+      return fcmToken || null;
     } catch (error) {
       console.error("Error retrieving FCM token:", error);
       return null;
@@ -43,16 +37,25 @@ export default function Login() {
     try {
       const fcmToken = await requestFcmToken();
 
-      console.log("fcm token: ", fcmToken);
-      // Use the centralized api instance
-      const { data } = await api.post("/api/login", {
-        ...formData,
-        fcm_token: fcmToken,
-      });
+      const response = await axios.post(
+        `${serverUrl}/api/login`,
+        {
+          email: formData.email,
+          password: formData.password,
+          fcm_token: fcmToken,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          withCredentials: false, // Set to true if using cookies/sessions
+        }
+      );
 
-      if (data.errors) {
-        setErrors(data.errors);
-      } else if (data.user) {
+      const { data } = response;
+
+      if (data.user) {
         const allowedUserTypes = ["app_admin", "barangay_admin"];
 
         if (data.user.status === "INACTIVE") {
@@ -64,6 +67,7 @@ export default function Login() {
           });
           clearAuthData();
         } else {
+          console.log(data);
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           setToken(data.token);
@@ -74,22 +78,13 @@ export default function Login() {
     } catch (error) {
       console.error("Login error:", error);
       if (error.response) {
-        // Server responded with error status
-        if (error.response.data?.errors) {
-          setErrors(error.response.data.errors);
-        } else {
-          setErrors({
+        setErrors(
+          error.response.data?.errors || {
             general: [error.response.data?.message || "Login failed"],
-          });
-        }
-      } else if (error.request) {
-        // Request was made but no response
-        setErrors({
-          general: ["Network error. Please check your connection."],
-        });
+          }
+        );
       } else {
-        // Other errors
-        setErrors({ general: ["Something went wrong. Please try again."] });
+        setErrors({ general: ["Network error. Please try again."] });
       }
     } finally {
       setIsLoading(false);

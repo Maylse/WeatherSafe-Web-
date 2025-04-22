@@ -1,5 +1,7 @@
+import axios from "axios";
 import { createContext, useEffect, useState } from "react";
-import api from "../../api";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export const AppContext = createContext();
 
@@ -11,7 +13,12 @@ export default function AppProvider({ children }) {
     if (!token) return;
 
     try {
-      const response = await api.get("/api/user");
+      const response = await axios.get(`${serverUrl}/api/user`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       setUser(response.data); // Ensure response.data contains userType
     } catch (error) {
       console.error("Error fetching user:", error);

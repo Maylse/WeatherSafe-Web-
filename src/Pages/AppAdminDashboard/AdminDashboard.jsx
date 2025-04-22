@@ -1,9 +1,11 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../Context/AppContext";
-import api from "../../../api";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function AdminDashboard({ setSelected }) {
-  const { user } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [stats, setStats] = useState({
     barangays: 0,
     barangayAdmins: 0,
@@ -16,7 +18,7 @@ export default function AdminDashboard({ setSelected }) {
     if (user?.userType === "app_admin") {
       fetchAllStats();
     }
-  }, [user]);
+  }, [user, token]); // Add token to dependency array
 
   async function fetchAllStats() {
     try {
@@ -25,9 +27,9 @@ export default function AdminDashboard({ setSelected }) {
       // Fetch all counts in parallel for better performance
       const [barangaysCount, barangayAdminsCount, postsCount] =
         await Promise.all([
-          fetchCount("api/barangays", "barangays"),
-          fetchCount("api/barangay-admins", "barangay_admins"),
-          fetchCount("api/posts", "posts"),
+          fetchCount(`${serverUrl}/api/barangays`, "barangays"),
+          fetchCount(`${serverUrl}/api/barangay-admins`, "barangay_admins"),
+          fetchCount(`${serverUrl}/api/posts`, "posts"),
         ]);
 
       setStats({
@@ -49,20 +51,20 @@ export default function AdminDashboard({ setSelected }) {
 
   async function fetchCount(endpoint, dataKey) {
     try {
-      const response = await api.get(endpoint);
+      const response = await axios.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      // Axios wraps the response data in a data property
       const responseData = response.data;
-
-      // Handle the count based on the endpoint's data structure
       if (responseData[dataKey] && Array.isArray(responseData[dataKey])) {
         return responseData[dataKey].length;
       }
-
       return 0;
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
-      return 0; // Return 0 if there's an error
+      return 0;
     }
   }
 

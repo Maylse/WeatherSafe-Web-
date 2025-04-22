@@ -12,7 +12,10 @@ import CommunityUsers from "../Pages/BrgyAdminDashboard/CommunityUsers/Community
 import Logo from "../assets/logo.png";
 import Profile from "./Profile";
 import Sitio from "./BrgyAdminDashboard/Sitios/Sitio";
-import api from "../../api";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
+
+import axios from "axios";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -59,7 +62,11 @@ export default function Layout() {
 
   async function fetchNotifications() {
     try {
-      const response = await api.get("/api/notifications");
+      const response = await axios.get(`${serverUrl}/api/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setNotifications(response.data.notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -68,8 +75,16 @@ export default function Layout() {
 
   async function markAllAsRead() {
     try {
-      await api.post("/api/notifications/mark-all-as-read");
-      fetchNotifications(); // Refresh notifications after marking as read
+      await axios.post(
+        `${serverUrl}/api/notifications/mark-all-as-read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchNotifications();
     } catch (error) {
       console.error("Error marking notifications as read:", error);
     }
@@ -78,7 +93,15 @@ export default function Layout() {
   async function handleLogout(e) {
     e.preventDefault();
     try {
-      await api.post("/api/logout");
+      await axios.post(
+        `${serverUrl}/api/logout`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setUser(null);
       setToken(null);
       localStorage.removeItem("token");
