@@ -251,8 +251,8 @@ export default function Profile() {
           className="w-24 h-24 rounded-full border border-gray-300"
         />
         <div>
-          <p className="text-lg font-semibold">{profileData.name}</p>
-          <p className="text-sm text-gray-500">{profileData.email}</p>
+          <p className="text-lg font-semibold text-black">{profileData.name}</p>
+          <p className="text-sm text-black">{profileData.email}</p>
         </div>
       </div>
       <button onClick={() => setIsModalOpen(true)} className="btn btn-primary">

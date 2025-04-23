@@ -147,12 +147,12 @@ export default function Layout() {
                 Notifications
               </h3>
               {notifications.length > 0 ? (
-                <ul className="mt-2 space-y-2">
+                <ul className="mt-2 space-y-2  text-black">
                   {notifications.map((notif, index) => (
                     <li
                       key={index}
                       className={`p-2 rounded-md ${
-                        notif.is_read ? "bg-green-100" : "bg-red-100"
+                        notif.is_read ? "bg-blue-100" : "bg-red-100"
                       }`}
                     >
                       {notif.message}
@@ -160,7 +160,7 @@ export default function Layout() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-black-500 mt-2">
                   No new notifications
                 </p>
               )}
@@ -169,7 +169,7 @@ export default function Layout() {
 
           {/* Logout Button */}
           <form onSubmit={handleLogout}>
-            <button className="btn btn-error text-white">Log out</button>
+            <button className="btn btn-error text-black">Log out</button>
           </form>
         </div>
       </header>

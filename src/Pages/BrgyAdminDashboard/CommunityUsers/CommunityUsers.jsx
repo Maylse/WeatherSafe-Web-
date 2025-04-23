@@ -187,7 +187,7 @@ export default function CommunityUsers() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Community Users</h1>
+      <h1 className="text-2xl font-bold mb-4 text-black">Community Users</h1>
       {errors.length > 0 && (
         <div className="text-red-500 mb-4">
           <ul>
@@ -197,7 +197,7 @@ export default function CommunityUsers() {
           </ul>
         </div>
       )}
-      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300">
+      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300 text-black">
         <thead className="bg-gray-200">
           <tr>
             <th className="px-4 py-2 text-left border">Community User Name</th>

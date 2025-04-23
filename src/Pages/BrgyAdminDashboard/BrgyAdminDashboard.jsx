@@ -98,7 +98,7 @@ export default function BarangayAdminDashboard({ setSelected }) {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Brgy Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-black">Brgy Admin Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Barangay Users Card */}
@@ -106,11 +106,11 @@ export default function BarangayAdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Barangay Users")} // Matches menuItems label
         >
-          <h2 className="text-xl font-semibold mb-2">Total Barangay Users</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">Total Barangay Users</h2>
           <p className="text-3xl font-bold text-primary">
             {stats.barangayUsersCount}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all barangay users
           </p>
         </div>
@@ -120,11 +120,11 @@ export default function BarangayAdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Community Users")} // Matches menuItems label
         >
-          <h2 className="text-xl font-semibold mb-2">Total Community Users</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">Total Community Users</h2>
           <p className="text-3xl font-bold text-primary">
             {stats.communityUsersCount}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all community users
           </p>
         </div>

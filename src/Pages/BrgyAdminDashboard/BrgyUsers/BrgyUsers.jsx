@@ -308,7 +308,7 @@ export default function BrgyUsers() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Barangay Users</h1>
+      <h1 className="text-2xl font-bold mb-4 text-black">Barangay Users</h1>
       <button
         onClick={() => {
           setIsModalOpen(true);
@@ -335,7 +335,7 @@ export default function BrgyUsers() {
           </ul>
         </div>
       )}
-      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300">
+      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300 text-black">
         <thead className="bg-gray-200">
           <tr>
             <th className="px-4 py-2 text-left border">Brgy User Name</th>

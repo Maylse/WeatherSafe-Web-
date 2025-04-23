@@ -37,7 +37,7 @@ export default function Login() {
 
     try {
       const fcmToken = await requestFcmToken();
-
+      console.log(fcmToken)
       const res = await fetch("/api/login", {
         method: "POST",
         body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
@@ -49,7 +49,6 @@ export default function Login() {
       if (data.errors) {
         setErrors(data.errors);
       } else if (data.user) {
-        // Check allowed user types
         const allowedUserTypes = ["app_admin", "barangay_admin"];
 
         if (data.user.status === "INACTIVE") {
@@ -61,7 +60,6 @@ export default function Login() {
           });
           clearAuthData();
         } else {
-          // Successful login for allowed user types
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           setToken(data.token);
@@ -76,13 +74,14 @@ export default function Login() {
       setIsLoading(false);
     }
   }
-  // Helper function
+
   function clearAuthData() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
+
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />
@@ -103,7 +102,7 @@ export default function Login() {
                 setFormData({ ...formData, email: e.target.value })
               }
               required
-              className="input input-bordered w-full bg-gray-100 text-gray-800"
+              className="input input-bordered w-full bg-white text-black"
             />
             {errors.email && (
               <p className="text-red-500 text-sm">{errors.email[0]}</p>
@@ -121,7 +120,7 @@ export default function Login() {
                 setFormData({ ...formData, password: e.target.value })
               }
               required
-              className="input input-bordered w-full bg-gray-100 text-gray-800 text-sm"
+              className="input input-bordered w-full bg-white text-black"
             />
             {errors.password && (
               <p className="text-red-500 text-sm">{errors.password[0]}</p>
