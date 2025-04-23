@@ -2,6 +2,9 @@ import { useContext, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import "./Register.css";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function Register() {
   const { token, setToken } = useContext(AppContext);
@@ -18,7 +21,7 @@ export default function Register() {
 
   async function handleRegister(e) {
     e.preventDefault();
-    const res = await fetch("/api/register", {
+    const res = await axios.get(`${serverUrl}/api/register`, {
       method: "post",
       body: JSON.stringify(formData),
       headers: {

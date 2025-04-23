@@ -1,6 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function CommunityUsers() {
   const [loading, setLoading] = useState(true);
@@ -10,7 +13,7 @@ export default function CommunityUsers() {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [communityUserToRestore, setCommunityUserToRestore] = useState(null);
   const [selectedCommunityUser, setSelectedCommunityUser] = useState(null);
-  const { user, token, setUser, setToken } = useContext(AppContext);
+  const { user, token } = useContext(AppContext); // Token is handled by api.js
   const [communityUsers, setCommunityUsers] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -20,87 +23,88 @@ export default function CommunityUsers() {
     password_confirmation: "",
   });
 
+  // Fetch community users using Axios
   async function getCommunityUsers() {
     try {
-      const res = await fetch("/api/community-user", {
-        method: "GET",
+      setLoading(true);
+      const response = await axios.get(`${serverUrl}/api/community-user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await res.json();
-      console.log(data);
-      if (res.ok) {
-        setCommunityUsers(data.community_users || []); // Default to empty array if data is undefined
-      } else {
-        setErrors([data.message || "Failed to load Community Users"]);
-      }
+      setCommunityUsers(response.data.community_users || []);
+      setErrors([]);
     } catch (error) {
+      console.error("Error fetching community users:", error);
       setErrors(["Failed to fetch Community Users"]);
     } finally {
-      setLoading(false); // Set loading to false after data is fetched
+      setLoading(false);
     }
   }
 
   const handleEdit = (communityUser) => {
-    setSelectedCommunityUser(communityUser); // Set the selected admin for the modal
-    setIsModalOpen(true); // Open the modal
+    setSelectedCommunityUser(communityUser);
+    setIsModalOpen(true);
     setFormData({
-      email: communityUser?.user?.email || "", // Safe access for email
+      email: communityUser?.user?.email || "",
       password: "",
       password_confirmation: "",
     });
   };
 
   const handleSave = async (e) => {
-    e.preventDefault(); // Prevent the form from submitting normally
-    const { email, password, password_confirmation } = formData;
-
-    const method = "PUT"; // Use PUT if editing, POST if creating
-    const endpoint = `/api/community-user/${selectedCommunityUser.id}`;
+    e.preventDefault();
+    setErrors([]);
 
     try {
-      const res = await fetch(endpoint, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const { email, password, password_confirmation } = formData;
+
+      // Validate password confirmation
+      if (password && password !== password_confirmation) {
+        throw new Error("Passwords do not match");
+      }
+
+      const response = await axios.put(
+        `${serverUrl}/api/community-user/${selectedCommunityUser.id}`,
+        {
           email,
           password,
           password_confirmation,
-        }),
-      });
-      const data = await res.json();
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (res.ok) {
-        // Refetch the list of Barangay Admins to ensure the table is up-to-date
-        await getCommunityUsers();
-        setIsModalOpen(false);
-        setSelectedCommunityUser(null);
-        setFormData({
-          email: "",
-          password: "",
-          password_confirmation: "",
-        });
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      // On success
+      await getCommunityUsers();
+      setIsModalOpen(false);
+      setSelectedCommunityUser(null);
+      setFormData({
+        email: "",
+        password: "",
+        password_confirmation: "",
+      });
     } catch (error) {
-      console.error("Error saving Barangay User:", error);
-      setErrors(["Something went wrong!"]);
+      console.error("Error saving community user:", error);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors([error.message || "Something went wrong!"]);
+      }
     }
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false); // Close the modal
-    setSelectedCommunityUser(null); // Clear the selected post
+    setIsModalOpen(false);
+    setSelectedCommunityUser(null);
     setFormData({
       email: "",
       password: "",
       password_confirmation: "",
-    }); // Reset form data
+    });
   };
 
   const handleDelete = (communityUser) => {
@@ -108,79 +112,50 @@ export default function CommunityUsers() {
     setIsDeleteModalOpen(true);
   };
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!communityUserToDelete) return;
 
     try {
-      const res = await fetch(
-        `/api/community-user/${communityUserToDelete.id}`,
+      await axios.delete(
+        `${serverUrl}/api/community-user/${communityUserToDelete.id}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getCommunityUsers();
-        setIsDeleteModalOpen(false);
-      } else {
-        console.error(
-          "Error deleting community user:",
-          data.message || "Unknown error"
-        );
-      }
+      await getCommunityUsers();
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error(
-        "An error occurred while deleting a community user:",
-        error
-      );
+      console.error("Error deleting community user:", error);
     }
-  }
+  };
 
-  async function confirmRestore() {
+  const confirmRestore = async () => {
     if (!communityUserToRestore) return;
 
     try {
-      const res = await fetch(
-        `/api/community-user/${communityUserToRestore.id}/restore`,
+      await axios.patch(
+        `${serverUrl}/api/community-user/${communityUserToRestore.id}/restore`,
+        {},
         {
-          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getCommunityUsers();
-        setIsRestoreModalOpen(false);
-      } else {
-        console.error(
-          "Error restoring a community user:",
-          data.message || "Unknown error"
-        );
-      }
+      await getCommunityUsers();
+      setIsRestoreModalOpen(false);
     } catch (error) {
-      console.error(
-        "An error occurred while restoring a community user:",
-        error
-      );
+      console.error("Error restoring community user:", error);
     }
-  }
-  const handleRestore = async (communityUser) => {
+  };
+
+  const handleRestore = (communityUser) => {
     setCommunityUserToRestore(communityUser);
     setIsRestoreModalOpen(true);
   };
 
-  // Fetch Barangay Users when component mounts
   useEffect(() => {
     getCommunityUsers();
   }, []);
@@ -189,7 +164,7 @@ export default function CommunityUsers() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4 text-black">Community Users</h1>
       {errors.length > 0 && (
-        <div className="text-red-500 mb-4">
+        <div className="alert alert-error mb-4">
           <ul>
             {errors.map((error, index) => (
               <li key={index}>{error}</li>
@@ -275,47 +250,51 @@ export default function CommunityUsers() {
       {isModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h2 className="text-xl font-semibold mb-4"></h2>
+            <h2 className="text-xl font-semibold mb-4">Edit Community User</h2>
             <form onSubmit={handleSave}>
               <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Email</span>
                 </label>
                 <input
-                  className="input input-bordered"
                   type="email"
+                  className="input input-bordered"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
+                  required
                 />
+                {errors.email && (
+                  <p className="text-error">{errors.email[0]}</p>
+                )}
               </div>
-              {errors.email && <p className="text-error">{errors.email[0]}</p>}
 
               <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Password</span>
                 </label>
                 <input
-                  className="input input-bordered"
                   type="password"
+                  className="input input-bordered"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
+                  placeholder="Leave blank to keep current password"
                 />
+                {errors.password && (
+                  <p className="text-error">{errors.password[0]}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-error">{errors.password[0]}</p>
-              )}
 
               <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Confirm Password</span>
                 </label>
                 <input
-                  className="input input-bordered"
                   type="password"
+                  className="input input-bordered"
                   value={formData.password_confirmation}
                   onChange={(e) =>
                     setFormData({
@@ -323,35 +302,40 @@ export default function CommunityUsers() {
                       password_confirmation: e.target.value,
                     })
                   }
+                  placeholder="Leave blank to keep current password"
                 />
+                {errors.password_confirmation && (
+                  <p className="text-error">
+                    {errors.password_confirmation[0]}
+                  </p>
+                )}
               </div>
-              {errors.password_confirmation && (
-                <p className="text-error">{errors.password_confirmation[0]}</p>
-              )}
-              <div className="flex justify-end space-x-2">
+
+              <div className="modal-action">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="btn btn-ghost"
                 >
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Save
+                  Save Changes
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
             <h3 className="font-bold text-lg">Confirm Delete</h3>
             <p className="py-4">
-              Are you sure you want to delete {communityUserToDelete?.user.name}
-              ?
+              Are you sure you want to delete{" "}
+              {communityUserToDelete?.user?.name}?
             </p>
             <div className="modal-action">
               <button className="btn btn-error" onClick={confirmDelete}>
@@ -367,6 +351,7 @@ export default function CommunityUsers() {
           </div>
         </div>
       )}
+
       {/* Restore Confirmation Modal */}
       {isRestoreModalOpen && (
         <div className="modal modal-open">
@@ -374,7 +359,7 @@ export default function CommunityUsers() {
             <h3 className="font-bold text-lg">Confirm Restore</h3>
             <p className="py-4">
               Are you sure you want to restore{" "}
-              {communityUserToRestore?.user.name}?
+              {communityUserToRestore?.user?.name}?
             </p>
             <div className="modal-action">
               <button className="btn btn-success" onClick={confirmRestore}>

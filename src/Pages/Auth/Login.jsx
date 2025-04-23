@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import logo from "../../assets/logo.png";
 import { getToken } from "firebase/messaging";
-import { messaging } from "../../firebase"; // Ensure you export messaging in firebase.js
+import { messaging } from "../../firebase";
+import axios from "axios";
 
 export default function Login() {
   const { setToken, setUser } = useContext(AppContext);
@@ -13,17 +14,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
+
   async function requestFcmToken() {
     try {
       const fcmToken = await getToken(messaging, {
         vapidKey:
           "BE53qXL30ywUtx63VkQZVgt37Bk3eaNdB6K6WQ3T70cBQgKx89Gcs2gv-x1T5Kya6QXFCuFy_-rcM0rVUu5HgCg",
       });
-      if (!fcmToken) {
-        console.warn("No FCM token received.");
-        return null;
-      }
-      return fcmToken;
+      return fcmToken || null;
     } catch (error) {
       console.error("Error retrieving FCM token:", error);
       return null;
@@ -61,7 +60,7 @@ export default function Login() {
           });
           clearAuthData();
         } else {
-          // Successful login for allowed user types
+          console.log(data);
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
           setToken(data.token);
@@ -71,18 +70,27 @@ export default function Login() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrors({ general: ["Something went wrong. Please try again."] });
+      if (error.response) {
+        setErrors(
+          error.response.data?.errors || {
+            general: [error.response.data?.message || "Login failed"],
+          }
+        );
+      } else {
+        setErrors({ general: ["Network error. Please try again."] });
+      }
     } finally {
       setIsLoading(false);
     }
   }
-  // Helper function
+
   function clearAuthData() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
   }
+
   return (
     <div className="login-page flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-sky-400 to-blue-600">
       <img src={logo} alt="WeatherSafe Logo" className="w-60 mx-auto" />

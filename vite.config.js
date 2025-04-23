@@ -4,16 +4,8 @@ import react from "@vitejs/plugin-react";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      "/api": {
-        target: "https://weathersafeapi.onrender.com",
-        changeOrigin: true,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      },
-    },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
   },
 });

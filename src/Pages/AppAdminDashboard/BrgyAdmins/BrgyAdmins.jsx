@@ -1,6 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function BrgyAdmins() {
   const [loading, setLoading] = useState(true);
@@ -11,7 +14,7 @@ export default function BrgyAdmins() {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [brgyAdminToRestore, setBrgyAdminToRestore] = useState(null);
   const [selectedBrgyAdmin, setSelectedBrgyAdmin] = useState(null);
-  const { user, token, setUser, setToken } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [brgyAdmins, setBrgyAdmins] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -23,28 +26,24 @@ export default function BrgyAdmins() {
     password: "",
     password_confirmation: "",
   });
-
   const [previewImage, setPreviewImage] = useState(null);
 
+  // Fetch barangay admins using Axios
   async function getBrgyAdmins() {
     try {
-      const res = await fetch("/api/barangay-admins", {
-        method: "GET",
+      setLoading(true);
+      const response = await axios.get(`${serverUrl}/api/barangay-admins`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await res.json();
-
-      if (res.ok) {
-        setBrgyAdmins(data.barangay_admins || []); // Default to empty array if data is undefined
-      } else {
-        setErrors([data.message || "Failed to load Barangay Admins"]);
-      }
+      setBrgyAdmins(response.data.barangay_admins || []);
+      setErrors([]);
     } catch (error) {
+      console.error("Error fetching barangay admins:", error);
       setErrors(["Failed to fetch Barangay Admins"]);
     } finally {
-      setLoading(false); // Set loading to false after data is fetched
+      setLoading(false);
     }
   }
 
@@ -53,33 +52,29 @@ export default function BrgyAdmins() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result); // Update preview with new image
+        setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
-      setFormData({ ...formData, profile: file }); // Store new file in formData
+      setFormData({ ...formData, profile: file });
     }
   };
 
   const handleImageUpload = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "WeatherSafePreset"); // Ensure this preset exists in Cloudinary
+    formData.append("upload_preset", "WeatherSafePreset");
 
     try {
-      const response = await fetch(
+      const response = await axios.post(
         "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Image upload failed");
-      }
-
-      const data = await response.json();
-      return data.secure_url; // The URL of the uploaded image
+      return response.data.secure_url;
     } catch (error) {
       console.error("Image upload failed:", error);
       return null;
@@ -88,50 +83,27 @@ export default function BrgyAdmins() {
 
   const extractPublicId = (imageUrl) => {
     if (!imageUrl) return null;
-
-    // Remove Cloudinary base URL
     const urlParts = imageUrl.split("/");
-
-    // Find the index of 'upload' and ignore version numbers
     const uploadIndex = urlParts.findIndex((part) => part === "upload");
     if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) return null;
-
-    // Extract parts after 'upload' (excluding version)
-    const relevantParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' + version
-
-    // Join folder structure (if any) and filename without extension
-    const publicId = relevantParts.join("/").split(".")[0];
-
-    return publicId;
+    const relevantParts = urlParts.slice(uploadIndex + 2);
+    return relevantParts.join("/").split(".")[0];
   };
 
   const handleDeleteImage = async (imageUrl) => {
-    if (!imageUrl) return;
-
-    console.log("Image URL before extracting publicId:", imageUrl);
-
-    const publicId = extractPublicId(imageUrl); // Use the corrected function
-
-    console.log("Extracted Public ID:", publicId);
-
-    if (!publicId) {
-      console.error("Failed to extract a valid public ID.");
-      return;
-    }
+    const publicId = extractPublicId(imageUrl);
+    if (!publicId) return;
 
     try {
-      const response = await fetch("/api/delete-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ publicId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete image");
-      }
+      await axios.post(
+        `${serverUrl}/api/delete-image`,
+        { publicId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log("Previous image deleted successfully");
     } catch (error) {
@@ -140,98 +112,71 @@ export default function BrgyAdmins() {
   };
 
   const handleEdit = (brgyAdmin) => {
-    setSelectedBrgyAdmin(brgyAdmin); // Set the selected admin for the modal
-    setIsModalOpen(true); // Open the modal
+    setSelectedBrgyAdmin(brgyAdmin);
+    setIsModalOpen(true);
     setFormData({
-      email: brgyAdmin?.user?.email || "", // Safe access for email
+      email: brgyAdmin?.user?.email || "",
       barangay: brgyAdmin.barangay || "",
       brgy_admin_name: brgyAdmin.brgy_admin_name || "",
       password: "",
       password_confirmation: "",
     });
-    console.log(brgyAdmin);
-    setPreviewImage(brgyAdmin.user?.profile); // Set existing image as preview
+    setPreviewImage(brgyAdmin.user?.profile);
   };
 
   const handleSave = async (e) => {
-    e.preventDefault(); // Prevent the form from submitting normally
+    e.preventDefault();
+    if (isSaving) return;
 
-    if (isSaving) return; // Prevent further clicks if saving is in progress
-
-    setIsSaving(true); // Disable the save button while saving
-
-    // Check if the profile has been updated
-    if (formData.profile instanceof File) {
-      // If a new file is chosen, first delete the old image if it exists
-      if (selectedBrgyAdmin && selectedBrgyAdmin.user.profile) {
-        await handleDeleteImage(selectedBrgyAdmin.user.profile); // Delete the old image
-      }
-
-      // Upload the new image
-      const imageUrl = await handleImageUpload(formData.profile);
-      if (imageUrl) {
-        formData.profile = imageUrl; // Save image URL after upload
-      } else {
-        alert("Failed to upload image.");
-        setIsSaving(false); // Re-enable the button
-        return;
-      }
-    }
-
-    const {
-      email,
-      barangay,
-      brgy_admin_name,
-      profile,
-      password,
-      password_confirmation,
-    } = formData;
-
-    const method = selectedBrgyAdmin ? "PUT" : "POST"; // Use PUT if editing, POST if creating
-    const endpoint = selectedBrgyAdmin
-      ? `/api/barangay-admins/${selectedBrgyAdmin.id}`
-      : "/api/barangay-admins"; // Adjust endpoint based on the action (create vs update)
+    setIsSaving(true);
+    setErrors([]);
 
     try {
-      const res = await fetch(endpoint, {
-        method: method,
+      // Handle image upload if new file was selected
+      let updatedFormData = { ...formData };
+      if (formData.profile instanceof File) {
+        if (selectedBrgyAdmin?.user?.profile) {
+          await handleDeleteImage(selectedBrgyAdmin.user.profile);
+        }
+        const imageUrl = await handleImageUpload(formData.profile);
+        if (!imageUrl) throw new Error("Image upload failed");
+        updatedFormData.profile = imageUrl;
+      }
+
+      // Prepare the API call
+      const method = selectedBrgyAdmin ? "put" : "post";
+      const endpoint = selectedBrgyAdmin
+        ? `${serverUrl}/api/barangay-admins/${selectedBrgyAdmin.id}`
+        : `${serverUrl}/api/barangay-admins`;
+
+      const response = await axios[method](endpoint, updatedFormData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          barangay,
-          brgy_admin_name,
-          profile,
-          password,
-          password_confirmation,
-        }),
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        // Refetch the list of Barangay Admins to ensure the table is up-to-date
-        await getBrgyAdmins();
-        setIsModalOpen(false);
-        setPreviewImage(null);
-        setSelectedBrgyAdmin(null);
-        setFormData({
-          email: "",
-          barangay: "",
-          brgy_admin_name: "",
-          profile: "",
-          password: "",
-          password_confirmation: "",
-        });
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      // On success
+      await getBrgyAdmins();
+      setIsModalOpen(false);
+      setPreviewImage(null);
+      setSelectedBrgyAdmin(null);
+      setFormData({
+        email: "",
+        barangay: "",
+        brgy_admin_name: "",
+        profile: "",
+        password: "",
+        password_confirmation: "",
+      });
     } catch (error) {
       console.error("Error saving Barangay Admin:", error);
-      setErrors(["Something went wrong!"]);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors(["Something went wrong!"]);
+      }
     } finally {
-      setIsSaving(false); // Re-enable the button after the operation is finished
+      setIsSaving(false);
     }
   };
 
@@ -240,80 +185,55 @@ export default function BrgyAdmins() {
     setIsDeleteModalOpen(true);
   };
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!brgyAdminToDelete) return;
 
     try {
-      const res = await fetch(`/api/barangay-admins/${brgyAdminToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getBrgyAdmins();
-        setIsDeleteModalOpen(false);
-      } else {
-        console.error(
-          "Error deleting barangay admin:",
-          data.message || "Unknown error"
-        );
-      }
-    } catch (error) {
-      console.error(
-        "An error occurred while deleting a barangay admin:",
-        error
-      );
-    }
-  }
-
-  async function confirmRestore() {
-    if (!brgyAdminToRestore) return;
-
-    try {
-      const res = await fetch(
-        `/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
+      await axios.delete(
+        `${serverUrl}/api/barangay-admins/${brgyAdminToDelete.id}`,
         {
-          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getBrgyAdmins();
-        setIsRestoreModalOpen(false);
-      } else {
-        console.error(
-          "Error restoring a barangay admin:",
-          data.message || "Unknown error"
-        );
-      }
+      await getBrgyAdmins();
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error(
-        "An error occurred while restoring a barangay admin:",
-        error
-      );
+      console.error("Error deleting barangay admin:", error);
     }
-  }
-  const handleRestore = async (brgyAdmin) => {
+  };
+
+  const confirmRestore = async () => {
+    if (!brgyAdminToRestore) return;
+
+    try {
+      await axios.patch(
+        `${serverUrl}/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await getBrgyAdmins();
+      setIsRestoreModalOpen(false);
+    } catch (error) {
+      console.error("Error restoring barangay admin:", error);
+    }
+  };
+
+  const handleRestore = (brgyAdmin) => {
     setBrgyAdminToRestore(brgyAdmin);
     setIsRestoreModalOpen(true);
   };
 
-  // Fetch Barangay Admins when component mounts
   useEffect(() => {
     getBrgyAdmins();
   }, []);
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4 text-black">Barangay Admins</h1>

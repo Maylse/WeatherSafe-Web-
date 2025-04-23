@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../Context/AppContext";
-import { Bell } from "lucide-react"; // Import Bell icon from lucide-react
+import { Bell } from "lucide-react";
 import AdminDashboard from "../Pages/AppAdminDashboard/AdminDashboard";
 import BrgyAdmins from "../Pages/AppAdminDashboard/BrgyAdmins/BrgyAdmins";
 import Barangays from "../Pages/AppAdminDashboard/Barangays/Barangays";
@@ -11,6 +11,11 @@ import BarangayUsers from "../Pages/BrgyAdminDashboard/BrgyUsers/BrgyUsers";
 import CommunityUsers from "../Pages/BrgyAdminDashboard/CommunityUsers/CommunityUsers";
 import Logo from "../assets/logo.png";
 import Profile from "./Profile";
+import Sitio from "./BrgyAdminDashboard/Sitios/Sitio";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
+
+import axios from "axios";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -56,34 +61,55 @@ export default function Layout() {
   }, []);
 
   async function fetchNotifications() {
-    const res = await fetch("/api/notifications", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setNotifications(data.notifications);
+    try {
+      const response = await axios.get(`${serverUrl}/api/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setNotifications(response.data.notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
   }
 
   async function markAllAsRead() {
-    await fetch("/api/notifications/mark-all-as-read", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchNotifications(); // Refresh notifications after marking as read
+    try {
+      await axios.post(
+        `${serverUrl}/api/notifications/mark-all-as-read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+    }
   }
 
   async function handleLogout(e) {
     e.preventDefault();
-    await fetch("/api/logout", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
+    try {
+      await axios.post(
+        `${serverUrl}/api/logout`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   }
 
   const getMenuItems = () => {
@@ -105,6 +131,7 @@ export default function Layout() {
         },
         { label: "Barangay Users", component: <BarangayUsers /> },
         { label: "Community Users", component: <CommunityUsers /> },
+        { label: "Sitios", component: <Sitio /> },
       ];
     }
     return [];

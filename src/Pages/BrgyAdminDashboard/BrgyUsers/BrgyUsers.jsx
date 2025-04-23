@@ -1,18 +1,20 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
+import axios from "axios";
+
+const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function BrgyUsers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [brgyUserToDelete, setBrgyUserToDelete] = useState(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [brgyUserToRestore, setBrgyUserToRestore] = useState(null);
   const [selectedBrgyUser, setSelectedBrgyUser] = useState(null);
-  const { user, token, setUser, setToken } = useContext(AppContext);
+  const { user, token } = useContext(AppContext);
   const [brgyUsers, setBrgyUsers] = useState([]);
   const navigate = useNavigate();
   const [errors, setErrors] = useState([]);
@@ -24,28 +26,25 @@ export default function BrgyUsers() {
     password_confirmation: "",
     profile: "",
   });
-
   const [previewImage, setPreviewImage] = useState(null);
 
+  // Fetch barangay users using Axios
   async function getBrgyUsers() {
     try {
-      const res = await fetch("/api/barangay-user", {
-        method: "GET",
+      setLoading(true);
+      const response = await axios.get(`${serverUrl}/api/barangay-user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await res.json();
-      console.log(data);
-      if (res.ok) {
-        setBrgyUsers(data.barangay_users || []); // Default to empty array if data is undefined
-      } else {
-        setErrors([data.message || "Failed to load Barangay Users"]);
-      }
+
+      setBrgyUsers(response.data.barangay_users || []);
+      setErrors([]);
     } catch (error) {
+      console.error("Error fetching barangay users:", error);
       setErrors(["Failed to fetch Barangay Users"]);
     } finally {
-      setLoading(false); // Set loading to false after data is fetched
+      setLoading(false);
     }
   }
 
@@ -54,33 +53,29 @@ export default function BrgyUsers() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result); // Update preview with new image
+        setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
-      setFormData({ ...formData, profile: file }); // Store new file in formData
+      setFormData({ ...formData, profile: file });
     }
   };
 
   const handleImageUpload = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "WeatherSafePreset"); // Ensure this preset exists in Cloudinary
+    formData.append("upload_preset", "WeatherSafePreset");
 
     try {
-      const response = await fetch(
+      const response = await axios.post(
         "https://api.cloudinary.com/v1_1/dkx4tszqm/image/upload",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
-
-      if (!response.ok) {
-        throw new Error("Image upload failed");
-      }
-
-      const data = await response.json();
-      return data.secure_url; // The URL of the uploaded image
+      return response.data.secure_url;
     } catch (error) {
       console.error("Image upload failed:", error);
       return null;
@@ -89,144 +84,96 @@ export default function BrgyUsers() {
 
   const extractPublicId = (imageUrl) => {
     if (!imageUrl) return null;
-
-    // Remove Cloudinary base URL
     const urlParts = imageUrl.split("/");
-
-    // Find the index of 'upload' and ignore version numbers
     const uploadIndex = urlParts.findIndex((part) => part === "upload");
     if (uploadIndex === -1 || uploadIndex + 1 >= urlParts.length) return null;
-
-    // Extract parts after 'upload' (excluding version)
-    const relevantParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' + version
-
-    // Join folder structure (if any) and filename without extension
-    const publicId = relevantParts.join("/").split(".")[0];
-
-    return publicId;
+    const relevantParts = urlParts.slice(uploadIndex + 2);
+    return relevantParts.join("/").split(".")[0];
   };
 
   const handleDeleteImage = async (imageUrl) => {
-    if (!imageUrl) return;
-
-    console.log("Image URL before extracting publicId:", imageUrl);
-
-    const publicId = extractPublicId(imageUrl); // Use the corrected function
-
-    console.log("Extracted Public ID:", publicId);
-
-    if (!publicId) {
-      console.error("Failed to extract a valid public ID.");
-      return;
-    }
+    const publicId = extractPublicId(imageUrl);
+    if (!publicId) return;
 
     try {
-      const response = await fetch("/api/delete-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ publicId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete image");
-      }
-
-      console.log("Previous image deleted successfully");
+      await axios.post(
+        `${serverUrl}/api/delete-image`,
+        { publicId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
     } catch (error) {
       console.error("Failed to delete previous image:", error);
     }
   };
 
   const handleEdit = (brgyUser) => {
-    setSelectedBrgyUser(brgyUser); // Set the selected admin for the modal
-    setIsModalOpen(true); // Open the modal
+    setSelectedBrgyUser(brgyUser);
+    setIsModalOpen(true);
     setFormData({
-      email: brgyUser?.user?.email || "", // Safe access for email
+      email: brgyUser?.user?.email || "",
       barangay: brgyUser.barangay || "",
       brgy_user_name: brgyUser.brgy_user_name || "",
       password: "",
       password_confirmation: "",
     });
-
-    setPreviewImage(brgyUser.user?.profile); // Set existing image as preview
+    setPreviewImage(brgyUser.user?.profile);
   };
 
   const handleSave = async (e) => {
-    e.preventDefault(); // Prevent the form from submitting normally
-
-    if (isSaving) return; // Prevent further clicks if saving is in progress
-    setLoading(true);
-    setIsSaving(true); // Disable the save button while saving
-
-    // Check if the profile has been updated
-    if (formData.profile instanceof File) {
-      if (selectedBrgyUser && selectedBrgyUser.user.profile) {
-        console.log("Deleting old image: ", selectedBrgyUser.user.profile); // Debugging step
-        await handleDeleteImage(selectedBrgyUser.user.profile); // Delete the old image
-      }
-
-      // Upload the new image
-      const imageUrl = await handleImageUpload(formData.profile);
-      if (imageUrl) {
-        formData.profile = imageUrl; // Save image URL after upload
-      } else {
-        alert("Failed to upload image.");
-        setLoading(false);
-        setIsSaving(false); // Re-enable the button
-        return;
-      }
-    }
-
-    const { email, brgy_user_name, profile, password, password_confirmation } =
-      formData;
-
-    const method = selectedBrgyUser ? "PUT" : "POST"; // Use PUT if editing, POST if creating
-    const endpoint = selectedBrgyUser
-      ? `/api/barangay-user/${selectedBrgyUser.id}`
-      : "/api/barangay-user"; // Adjust endpoint based on the action (create vs update)
+    e.preventDefault();
+    setIsSaving(true);
+    setErrors([]);
 
     try {
-      const res = await fetch(endpoint, {
-        method: method,
+      // Handle image upload if new file was selected
+      let updatedFormData = { ...formData };
+      if (formData.profile instanceof File) {
+        if (selectedBrgyUser?.user?.profile) {
+          await handleDeleteImage(selectedBrgyUser.user.profile);
+        }
+        const imageUrl = await handleImageUpload(formData.profile);
+        if (!imageUrl) throw new Error("Image upload failed");
+        updatedFormData.profile = imageUrl;
+      }
+
+      // Prepare the API call
+      const method = selectedBrgyUser ? "put" : "post";
+      const endpoint = selectedBrgyUser
+        ? `${serverUrl}/api/barangay-user/${selectedBrgyUser.id}`
+        : `${serverUrl}/api/barangay-user`;
+
+      const response = await axios[method](endpoint, updatedFormData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          brgy_user_name,
-          profile,
-          password,
-          password_confirmation,
-        }),
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        // Refetch the list of Barangay Admins to ensure the table is up-to-date
-        await getBrgyUsers();
-        setIsModalOpen(false);
-        setPreviewImage(null);
-        setSelectedBrgyUser(null);
-        setFormData({
-          email: "",
-          barangay: "",
-          brgy_user_name: "",
-          profile: "",
-          password: "",
-          password_confirmation: "",
-        });
-      } else {
-        setErrors(data.errors || ["Something went wrong!"]);
-      }
+      // On success
+      await getBrgyUsers();
+      setIsModalOpen(false);
+      setPreviewImage(null);
+      setSelectedBrgyUser(null);
+      setFormData({
+        email: "",
+        barangay: "",
+        brgy_user_name: "",
+        profile: "",
+        password: "",
+        password_confirmation: "",
+      });
     } catch (error) {
       console.error("Error saving Barangay User:", error);
-      setErrors(["Something went wrong!"]);
+      if (error.response?.data?.errors) {
+        setErrors(Object.values(error.response.data.errors).flat());
+      } else {
+        setErrors(["Something went wrong!"]);
+      }
     } finally {
-      setIsSaving(false); // Re-enable the button after the operation is finished
+      setIsSaving(false);
     }
   };
 
@@ -235,73 +182,52 @@ export default function BrgyUsers() {
     setIsDeleteModalOpen(true);
   };
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!brgyUserToDelete) return;
 
     try {
-      const res = await fetch(`/api/barangay-user/${brgyUserToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getBrgyUsers();
-        setIsDeleteModalOpen(false);
-      } else {
-        console.error(
-          "Error deleting barangay user:",
-          data.message || "Unknown error"
-        );
-      }
-    } catch (error) {
-      console.error("An error occurred while deleting a barangay user:", error);
-    }
-  }
-
-  async function confirmRestore() {
-    if (!brgyUserToRestore) return;
-
-    try {
-      const res = await fetch(
-        `/api/barangay-user/${brgyUserToRestore.id}/restore`,
+      await axios.delete(
+        `${serverUrl}/api/barangay-user/${brgyUserToDelete.id}`,
         {
-          method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      const data = await res.json(); // Parse the JSON response
-
-      if (res.ok) {
-        // Refresh the list after deletion
-        await getBrgyUsers();
-        setIsRestoreModalOpen(false);
-      } else {
-        console.error(
-          "Error restoring a barangay user:",
-          data.message || "Unknown error"
-        );
-      }
+      await getBrgyUsers();
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error(
-        "An error occurred while restoring a barangay admin:",
-        error
-      );
+      console.error("Error deleting barangay user:", error);
     }
-  }
-  const handleRestore = async (brgyUser) => {
+  };
+
+  const confirmRestore = async () => {
+    if (!brgyUserToRestore) return;
+
+    try {
+      await axios.patch(
+        `${serverUrl}/api/barangay-user/${brgyUserToRestore.id}/restore`,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await getBrgyUsers();
+      setIsRestoreModalOpen(false);
+    } catch (error) {
+      console.error("Error restoring barangay user:", error);
+    }
+  };
+
+  const handleRestore = (brgyUser) => {
     setBrgyUserToRestore(brgyUser);
     setIsRestoreModalOpen(true);
   };
 
-  // Fetch Barangay Users when component mounts
   useEffect(() => {
     getBrgyUsers();
   }, []);
@@ -324,10 +250,11 @@ export default function BrgyUsers() {
         }}
         className="btn btn-primary mb-4"
       >
-        Add a New Barangay User
+        Add New Barangay User
       </button>
+
       {errors.length > 0 && (
-        <div className="text-red-500 mb-4">
+        <div className="alert alert-error mb-4">
           <ul>
             {errors.map((error, index) => (
               <li key={index}>{error}</li>
@@ -411,11 +338,10 @@ export default function BrgyUsers() {
         <div className="modal modal-open">
           <div className="modal-box">
             <h2 className="text-xl font-semibold mb-4">
-              {selectedBrgyUser ? "Edit Brgy User" : "Add Brgy User"}
+              {selectedBrgyUser ? "Edit Barangay User" : "Add Barangay User"}
             </h2>
 
-            {/* Profile Picture Upload */}
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 mb-4">
               <label className="block text-sm font-medium text-gray-700">
                 Profile Picture
               </label>
@@ -434,14 +360,14 @@ export default function BrgyUsers() {
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
-                    strokeWidth={1.5}
                     stroke="currentColor"
-                    className="w-10 h-10 text-gray-500"
+                    className="w-12 h-12 text-gray-400"
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M6 18 18 6M6 6l12 12"
+                      strokeWidth="2"
+                      d="M16 12v4M12 16h4M8 12v4M12 8h4M4 4l16 16"
                     />
                   </svg>
                 )}
@@ -488,7 +414,6 @@ export default function BrgyUsers() {
                   }
                 />
               </div>
-              {errors.email && <p className="text-error">{errors.email[0]}</p>}
 
               <div className="form-control mb-4">
                 <label className="label">
@@ -498,9 +423,7 @@ export default function BrgyUsers() {
                   className="input input-bordered"
                   type="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
               </div>
               {errors.password && (
@@ -515,17 +438,9 @@ export default function BrgyUsers() {
                   className="input input-bordered"
                   type="password"
                   value={formData.password_confirmation}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      password_confirmation: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
                 />
               </div>
-              {errors.password_confirmation && (
-                <p className="text-error">{errors.password_confirmation[0]}</p>
-              )}
 
               <div className="flex justify-end space-x-2">
                 <button
@@ -547,47 +462,45 @@ export default function BrgyUsers() {
           </div>
         </div>
       )}
-      {/* Delete Confirmation Modal */}
+
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg">Confirm Delete</h3>
-            <p className="py-4">
-              Are you sure you want to delete {brgyUserToDelete?.brgy_user_name}
-              ?
-            </p>
-            <div className="modal-action">
-              <button className="btn btn-error" onClick={confirmDelete}>
-                Yes, Delete
-              </button>
+            <h3 className="text-lg font-semibold">Are you sure you want to delete this user?</h3>
+            <div className="flex justify-end gap-4 mt-4">
               <button
-                className="btn"
                 onClick={() => setIsDeleteModalOpen(false)}
+                className="btn btn-ghost"
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="btn btn-danger"
+              >
+                Confirm
               </button>
             </div>
           </div>
         </div>
       )}
-      {/* Restore Confirmation Modal */}
+
       {isRestoreModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg">Confirm Restore</h3>
-            <p className="py-4">
-              Are you sure you want to restore{" "}
-              {brgyUserToRestore?.brgy_user_name}?
-            </p>
-            <div className="modal-action">
-              <button className="btn btn-success" onClick={confirmRestore}>
-                Yes, Restore
-              </button>
+            <h3 className="text-lg font-semibold">Are you sure you want to restore this user?</h3>
+            <div className="flex justify-end gap-4 mt-4">
               <button
-                className="btn"
                 onClick={() => setIsRestoreModalOpen(false)}
+                className="btn btn-ghost"
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmRestore}
+                className="btn btn-success"
+              >
+                Confirm
               </button>
             </div>
           </div>
