@@ -125,7 +125,7 @@ export default function AdminDashboard({ setSelected }) {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-black">Admin Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Barangays Card */}
@@ -133,23 +133,23 @@ export default function AdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Barangays")}
         >
-          <h2 className="text-xl font-semibold mb-2">Total Barangays</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">Total Barangays</h2>
           <p className="text-3xl font-bold text-primary">{stats.barangays}</p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all barangays
           </p>
         </div>
 
         {/* Barangay Admins Card */}
         <div
-          className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
+          className="card bg-blue shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Barangay Admins")}
         >
-          <h2 className="text-xl font-semibold mb-2">Barangay Admins</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">Barangay Admins</h2>
           <p className="text-3xl font-bold text-primary">
             {stats.barangayAdmins}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all barangay admins
           </p>
         </div>
@@ -159,9 +159,9 @@ export default function AdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Posts")}
         >
-          <h2 className="text-xl font-semibold mb-2">Total Posts</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">Total Posts</h2>
           <p className="text-3xl font-bold text-primary">{stats.posts}</p>
-          <p className="text-sm text-gray-500 mt-2">Click to view all posts</p>
+          <p className="text-sm text-black mt-2">Click to view all posts</p>
         </div>
       </div>
     </div>

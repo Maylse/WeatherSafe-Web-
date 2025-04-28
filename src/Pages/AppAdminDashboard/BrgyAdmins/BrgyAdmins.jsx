@@ -274,7 +274,7 @@ export default function BrgyAdmins() {
   }, []);
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Barangay Admins</h1>
+      <h1 className="text-2xl font-bold mb-4 text-black">Barangay Admins</h1>
       {/* Add New Barangay Admin Button */}
       <button
         onClick={() => {
@@ -305,7 +305,7 @@ export default function BrgyAdmins() {
         </div>
       )}
 
-      <table className="table-auto w-full text-sm border-collapse mt-4">
+      <table className="table-auto w-full text-sm border-collapse mt-4 text-black">
         <thead>
           <tr>
             <th className="px-4 py-2 text-left">Brgy Admin Name</th>

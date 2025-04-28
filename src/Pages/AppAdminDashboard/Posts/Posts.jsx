@@ -113,7 +113,7 @@ export default function Posts() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Posts</h1>
+      <h1 className="text-2xl font-bold mb-4 text-black">Posts</h1>
 
       <button
         onClick={() => {
@@ -137,7 +137,7 @@ export default function Posts() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="table-auto w-full text-sm border-collapse mt-4">
+        <table className="table-auto w-full text-sm border-collapse mt-4 text-black">
           <thead>
             <tr>
               <th className="px-4 py-2 text-left">Title</th>
@@ -158,9 +158,10 @@ export default function Posts() {
                   <td className="px-4 py-2">{post.title}</td>
                   <td className="px-4 py-2">{post.body}</td>
                   <td className="px-4 py-2">
+                  <div className="flex space-x-2">
                     <button
                       onClick={() => handleEdit(post)}
-                      className="btn btn-primary btn-sm mr-2"
+                      className="btn btn-primary btn-sm"
                     >
                       ✏️ Edit
                     </button>
@@ -170,7 +171,8 @@ export default function Posts() {
                     >
                       ❌ Delete
                     </button>
-                  </td>
+                  </div>
+                </td>
                 </tr>
               ))
             )}

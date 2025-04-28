@@ -162,8 +162,7 @@ export default function CommunityUsers() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Community Users</h1>
-
+      <h1 className="text-2xl font-bold mb-4 text-black">Community Users</h1>
       {errors.length > 0 && (
         <div className="alert alert-error mb-4">
           <ul>
@@ -173,84 +172,80 @@ export default function CommunityUsers() {
           </ul>
         </div>
       )}
-
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full text-sm border-collapse mt-4">
-          <thead className="bg-gray-200">
+      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300 text-black">
+        <thead className="bg-gray-200">
+          <tr>
+            <th className="px-4 py-2 text-left border">Community User Name</th>
+            <th className="px-4 py-2 text-left border">Email</th>
+            <th className="px-4 py-2 text-left border">Barangay</th>
+            <th className="px-4 py-2 text-left border">Status</th>
+            <th className="px-4 py-2 text-left border">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
             <tr>
-              <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Email</th>
-              <th className="px-4 py-2 text-left">Barangay</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Actions</th>
+              <td colSpan="5" className="px-4 py-2 text-center border">
+                Loading...
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="5" className="px-4 py-2 text-center">
-                  Loading...
+          ) : communityUsers.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="px-4 py-2 text-center border">
+                No Community Users available.
+              </td>
+            </tr>
+          ) : (
+            communityUsers.map((communityUser) => (
+              <tr
+                key={communityUser.id}
+                className="border-b hover:bg-slate-100"
+              >
+                <td className="px-4 py-2 border">
+                  {communityUser.user?.name || "N/A"}
                 </td>
-              </tr>
-            ) : communityUsers.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-4 py-2 text-center">
-                  No Community Users available.
+                <td className="px-4 py-2 border">
+                  {communityUser.user?.email || "No Email"}
                 </td>
-              </tr>
-            ) : (
-              communityUsers.map((communityUser) => (
-                <tr
-                  key={communityUser.id}
-                  className="border-b hover:bg-slate-100"
+                <td className="px-4 py-2 border">
+                  {communityUser.barangay.brgy_name || "N/A"}
+                </td>
+                <td
+                  className={`px-4 py-2 border font-semibold ${
+                    communityUser.user?.status === "ACTIVE"
+                      ? "text-green-600"
+                      : communityUser.user?.status === "INACTIVE"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}
                 >
-                  <td className="px-4 py-2">
-                    {communityUser.user?.name || "N/A"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {communityUser.user?.email || "N/A"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {communityUser.barangay?.brgy_name || "N/A"}
-                  </td>
-                  <td
-                    className={`px-4 py-2 font-semibold ${
-                      communityUser.user?.status === "ACTIVE"
-                        ? "text-green-600"
-                        : communityUser.user?.status === "INACTIVE"
-                        ? "text-red-600"
-                        : "text-gray-600"
-                    }`}
+                  {communityUser.user?.status || "N/A"}
+                </td>
+                <td className="px-4 py-2 border flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(communityUser)}
+                    className="btn btn-primary btn-sm"
                   >
-                    {communityUser.user?.status || "N/A"}
-                  </td>
-                  <td className="px-4 py-2 space-x-2">
-                    <button
-                      onClick={() => handleEdit(communityUser)}
-                      className="btn btn-primary btn-sm"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(communityUser)}
-                      className="btn btn-error btn-sm"
-                    >
-                      ❌ Delete
-                    </button>
-                    <button
-                      onClick={() => handleRestore(communityUser)}
-                      className="btn btn-success btn-sm"
-                    >
-                      🔃 Restore
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(communityUser)}
+                    className="btn btn-error btn-sm"
+                  >
+                    ❌ Delete
+                  </button>
+                  <button
+                    onClick={() => handleRestore(communityUser)}
+                    className="btn btn-success btn-sm"
+                  >
+                    🔃 Restore
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
       {/* Edit Modal */}
       {isModalOpen && (
         <div className="modal modal-open">

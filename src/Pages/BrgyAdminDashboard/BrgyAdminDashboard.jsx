@@ -147,11 +147,13 @@ export default function BarangayAdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Barangay Users")}
         >
-          <h2 className="text-xl font-semibold mb-2">Total Barangay Users</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">
+            Total Barangay Users
+          </h2>
           <p className="text-3xl font-bold text-primary">
             {stats.barangayUsersCount}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all barangay users
           </p>
         </div>
@@ -161,11 +163,13 @@ export default function BarangayAdminDashboard({ setSelected }) {
           className="card bg-white shadow-lg rounded-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
           onClick={() => handleCardClick("Community Users")}
         >
-          <h2 className="text-xl font-semibold mb-2">Total Community Users</h2>
+          <h2 className="text-xl font-semibold mb-2 text-black">
+            Total Community Users
+          </h2>
           <p className="text-3xl font-bold text-primary">
             {stats.communityUsersCount}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-black mt-2">
             Click to view all community users
           </p>
         </div>

@@ -109,7 +109,7 @@ export default function Barangays() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Barangays</h1>
+      <h1 className="text-2xl font-bold mb-4 text-black">Barangays</h1>
 
       <button
         onClick={() => {
@@ -133,7 +133,7 @@ export default function Barangays() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="table-auto w-full text-sm border-collapse mt-4">
+        <table className="table-auto w-full text-sm border-collapse mt-4 text-black">
           <thead>
             <tr>
               <th className="px-4 py-2 text-left">Barangay Name</th>

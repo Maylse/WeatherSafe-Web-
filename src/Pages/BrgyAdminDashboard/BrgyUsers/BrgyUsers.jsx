@@ -234,8 +234,7 @@ export default function BrgyUsers() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Barangay Users</h1>
-
+      <h1 className="text-2xl font-bold mb-4 text-black">Barangay Users</h1>
       <button
         onClick={() => {
           setIsModalOpen(true);
@@ -263,77 +262,78 @@ export default function BrgyUsers() {
           </ul>
         </div>
       )}
-
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full text-sm border-collapse mt-4">
-          <thead>
+      <table className="table-auto w-full text-sm border-collapse mt-4 border border-gray-300 text-black">
+        <thead className="bg-gray-200">
+          <tr>
+            <th className="px-4 py-2 text-left border">Brgy User Name</th>
+            <th className="px-4 py-2 text-left border">Email</th>
+            <th className="px-4 py-2 text-left border">Barangay</th>
+            <th className="px-4 py-2 text-left border">Status</th>
+            <th className="px-4 py-2 text-left border">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
             <tr>
-              <th className="px-4 py-2 text-left">Brgy User Name</th>
-              <th className="px-4 py-2 text-left">Email</th>
-              <th className="px-4 py-2 text-left">Barangay</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Actions</th>
+              <td colSpan="5" className="px-4 py-2 text-center border">
+                Loading...
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="5" className="px-4 py-2 text-center">
-                  Loading...
+          ) : brgyUsers.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="px-4 py-2 text-center border">
+                No Barangay Users available.
+              </td>
+            </tr>
+          ) : (
+            brgyUsers.map((brgyUser) => (
+              <tr key={brgyUser.id} className="border-b hover:bg-slate-100">
+                <td className="px-4 py-2 border">
+                  {brgyUser.brgy_user_name || "N/A"}
                 </td>
-              </tr>
-            ) : brgyUsers.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-4 py-2 text-center">
-                  No Barangay Users available.
+                <td className="px-4 py-2 border">
+                  {brgyUser.user?.email || "No Email"}
                 </td>
-              </tr>
-            ) : (
-              brgyUsers.map((brgyUser) => (
-                <tr key={brgyUser.id} className="border-b hover:bg-slate-100">
-                  <td className="px-4 py-2">{brgyUser.brgy_user_name}</td>
-                  <td className="px-4 py-2">{brgyUser.user?.email || "N/A"}</td>
-                  <td className="px-4 py-2">
-                    {brgyUser.barangay?.brgy_name || "N/A"}
-                  </td>
-                  <td
-                    className={`px-4 py-2 font-semibold ${
-                      brgyUser.user?.status === "ACTIVE"
-                        ? "text-green-600"
-                        : brgyUser.user?.status === "INACTIVE"
-                        ? "text-red-600"
-                        : "text-gray-600"
-                    }`}
+                <td className="px-4 py-2 border">
+                  {brgyUser.barangay.brgy_name || "N/A"}
+                </td>
+                <td
+                  className={`px-4 py-2 border font-semibold ${
+                    brgyUser.user?.status === "ACTIVE"
+                      ? "text-green-600"
+                      : brgyUser.user?.status === "INACTIVE"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {brgyUser.user?.status || "N/A"}
+                </td>
+                <td className="px-4 py-2 border flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(brgyUser)}
+                    className="btn btn-primary btn-sm"
                   >
-                    {brgyUser.user?.status || "N/A"}
-                  </td>
-                  <td className="px-4 py-2 space-x-2">
-                    <button
-                      onClick={() => handleEdit(brgyUser)}
-                      className="btn btn-primary btn-sm"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(brgyUser)}
-                      className="btn btn-error btn-sm"
-                    >
-                      ❌ Delete
-                    </button>
-                    <button
-                      onClick={() => handleRestore(brgyUser)}
-                      className="btn btn-success btn-sm"
-                    >
-                      🔃 Restore
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
+                    ✏️ Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(brgyUser)}
+                    className="btn btn-error btn-sm"
+                  >
+                    ❌ Delete
+                  </button>
+                  <button
+                    onClick={() => handleRestore(brgyUser)}
+                    className="btn btn-success btn-sm"
+                  >
+                    🔃 Restore
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+      {/* Add Edit Modal */}
       {isModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
@@ -360,18 +360,19 @@ export default function BrgyUsers() {
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
-                    strokeWidth={1.5}
                     stroke="currentColor"
-                    className="w-10 h-10 text-gray-500"
+                    className="w-12 h-12 text-gray-400"
                   >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M6 18 18 6M6 6l12 12"
+                      strokeWidth="2"
+                      d="M16 12v4M12 16h4M8 12v4M12 8h4M4 4l16 16"
                     />
                   </svg>
                 )}
               </div>
+              {/* Hidden File Input */}
               <input
                 id="fileInput"
                 type="file"
@@ -380,84 +381,68 @@ export default function BrgyUsers() {
                 onChange={handleFileChange}
               />
             </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="form-control">
+            <form onSubmit={handleSave}>
+              <div className="form-control mb-4">
                 <label className="label">
-                  <span className="label-text">Barangay User Name</span>
+                  <span className="label-text">Brgy User Name</span>
                 </label>
                 <input
-                  type="text"
                   className="input input-bordered"
+                  type="text"
                   value={formData.brgy_user_name}
                   onChange={(e) =>
-                    setFormData({ ...formData, brgy_user_name: e.target.value })
+                    setFormData({
+                      ...formData,
+                      brgy_user_name: e.target.value,
+                    })
                   }
-                  required
                 />
-                {errors.brgy_user_name && (
-                  <p className="text-error">{errors.brgy_user_name[0]}</p>
-                )}
               </div>
-
-              <div className="form-control">
+              {errors.brgy_user_name && (
+                <p className="text-error">{errors.brgy_user_name[0]}</p>
+              )}
+              <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Email</span>
                 </label>
                 <input
-                  type="email"
                   className="input input-bordered"
+                  type="email"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  required
                 />
-                {errors.email && (
-                  <p className="text-error">{errors.email[0]}</p>
-                )}
               </div>
 
-              <div className="form-control">
+              <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Password</span>
                 </label>
                 <input
-                  type="password"
                   className="input input-bordered"
+                  type="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
-                {errors.password && (
-                  <p className="text-error">{errors.password[0]}</p>
-                )}
               </div>
+              {errors.password && (
+                <p className="text-error">{errors.password[0]}</p>
+              )}
 
-              <div className="form-control">
+              <div className="form-control mb-4">
                 <label className="label">
                   <span className="label-text">Confirm Password</span>
                 </label>
                 <input
-                  type="password"
                   className="input input-bordered"
+                  type="password"
                   value={formData.password_confirmation}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      password_confirmation: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
                 />
-                {errors.password_confirmation && (
-                  <p className="text-error">
-                    {errors.password_confirmation[0]}
-                  </p>
-                )}
               </div>
 
-              <div className="modal-action">
+              <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -468,16 +453,9 @@ export default function BrgyUsers() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={isSaving}
+                  disabled={loading}
                 >
-                  {isSaving ? (
-                    <>
-                      <span className="loading loading-spinner"></span>
-                      Saving...
-                    </>
-                  ) : (
-                    "Save"
-                  )}
+                  {loading ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -488,20 +466,19 @@ export default function BrgyUsers() {
       {isDeleteModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg">Confirm Delete</h3>
-            <p className="py-4">
-              Are you sure you want to delete {brgyUserToDelete?.brgy_user_name}
-              ?
-            </p>
-            <div className="modal-action">
-              <button className="btn btn-error" onClick={confirmDelete}>
-                Yes, Delete
-              </button>
+            <h3 className="text-lg font-semibold">Are you sure you want to delete this user?</h3>
+            <div className="flex justify-end gap-4 mt-4">
               <button
-                className="btn"
                 onClick={() => setIsDeleteModalOpen(false)}
+                className="btn btn-ghost"
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="btn btn-danger"
+              >
+                Confirm
               </button>
             </div>
           </div>
@@ -511,20 +488,19 @@ export default function BrgyUsers() {
       {isRestoreModalOpen && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg">Confirm Restore</h3>
-            <p className="py-4">
-              Are you sure you want to restore{" "}
-              {brgyUserToRestore?.brgy_user_name}?
-            </p>
-            <div className="modal-action">
-              <button className="btn btn-success" onClick={confirmRestore}>
-                Yes, Restore
-              </button>
+            <h3 className="text-lg font-semibold">Are you sure you want to restore this user?</h3>
+            <div className="flex justify-end gap-4 mt-4">
               <button
-                className="btn"
                 onClick={() => setIsRestoreModalOpen(false)}
+                className="btn btn-ghost"
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmRestore}
+                className="btn btn-success"
+              >
+                Confirm
               </button>
             </div>
           </div>
