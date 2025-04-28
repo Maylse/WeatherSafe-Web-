@@ -36,19 +36,26 @@ export default function Login() {
 
     try {
       const fcmToken = await requestFcmToken();
-      console.log(fcmToken)
-      const res = await fetch("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ ...formData, fcm_token: fcmToken }),
-        headers: { "Content-Type": "application/json" },
-      });
 
-      const data = await res.json();
+      const response = await axios.post(
+        `${serverUrl}/api/login`,
+        {
+          email: formData.email,
+          password: formData.password,
+          fcm_token: fcmToken,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          withCredentials: false, // Set to true if using cookies/sessions
+        }
+      );
 
-      if (data.errors) {
-        setErrors(data.errors);
-      } else if (data.user) {
-        // Check allowed user types
+      const { data } = response;
+
+      if (data.user) {
         const allowedUserTypes = ["app_admin", "barangay_admin"];
 
         if (data.user.status === "INACTIVE") {
