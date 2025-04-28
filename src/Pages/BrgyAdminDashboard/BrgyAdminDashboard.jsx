@@ -61,6 +61,15 @@ export default function BarangayAdminDashboard({ setSelected }) {
     setSelected(componentName);
   };
 
+  if (!user) {
+    return null; // or show a loading spinner
+  }
+
+  const formatDate = (dateString) => {
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
   if (stats.loading) {
     return (
       <div className="p-6">
@@ -114,7 +123,24 @@ export default function BarangayAdminDashboard({ setSelected }) {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Brgy Admin Dashboard</h1>
-
+      <div className="bg-white shadow-md rounded-lg p-6 max-w-full mx-auto my-8">
+        <h2 className="text-2xl font-bold mb-4">Subscription Details</h2>
+        <div className="text-gray-700 mb-2">
+          <strong>Started On:</strong> {formatDate(user.created_at)}
+        </div>
+        <div className="text-gray-700 mb-2">
+          <strong>Ends On:</strong> {formatDate(user.subscription_end)}
+        </div>
+        <div
+          className={`mt-4 text-sm font-semibold ${
+            user.is_subscription_active ? "text-green-600" : "text-red-600"
+          }`}
+        >
+          {user.is_subscription_active
+            ? "Active Subscription"
+            : "Subscription Inactive"}
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Barangay Users Card */}
         <div

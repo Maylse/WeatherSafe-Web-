@@ -17,6 +17,8 @@ export default function BrgyAdmins() {
   const { user, token } = useContext(AppContext);
   const [brgyAdmins, setBrgyAdmins] = useState([]);
   const navigate = useNavigate();
+  const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
+  const [brgyAdminToExtend, setBrgyAdminToExtend] = useState(null);
   const [errors, setErrors] = useState([]);
   const [formData, setFormData] = useState({
     email: "",
@@ -230,7 +232,43 @@ export default function BrgyAdmins() {
     setBrgyAdminToRestore(brgyAdmin);
     setIsRestoreModalOpen(true);
   };
+  const handleExtendSubscription = (brgyAdmin) => {
+    if (!brgyAdmin?.id) {
+      console.error("Invalid barangay admin data:", brgyAdmin);
+      alert("Cannot extend subscription - invalid admin data");
+      return;
+    }
+    setBrgyAdminToExtend(brgyAdmin);
+    setIsExtendModalOpen(true);
+  };
 
+  const confirmExtendSubscription = async () => {
+    if (!brgyAdminToExtend?.id) {
+      alert("No barangay admin selected for extension");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${serverUrl}/api/barangay-admins/${brgyAdminToExtend.id}/extend-subscription`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await getBrgyAdmins();
+      setIsExtendModalOpen(false);
+      alert(
+        `Subscription extended until ${response.data.new_subscription_end}`
+      );
+    } catch (error) {
+      console.error("Error extending subscription:", error);
+      alert(error.response?.data?.message || "Failed to extend subscription");
+    }
+  };
   useEffect(() => {
     getBrgyAdmins();
   }, []);
@@ -273,6 +311,8 @@ export default function BrgyAdmins() {
             <th className="px-4 py-2 text-left">Brgy Admin Name</th>
             <th className="px-4 py-2 text-left">Email</th>
             <th className="px-4 py-2 text-left">Barangay</th>
+            <th className="px-4 py-2 text-left">Subscription Start</th>
+            <th className="px-4 py-2 text-left">Subscription End</th>
             <th className="px-4 py-2 text-left">Status</th>
             <th className="px-4 py-2 text-left">Actions</th>
           </tr>
@@ -308,6 +348,27 @@ export default function BrgyAdmins() {
                     {brgyAdmin.user?.email || "No Email"}
                   </td>
                   <td className="px-4 py-2">{brgyAdmin.barangay}</td>
+                  <td className="px-4 py-2">
+                    {brgyAdmin.subscription_start
+                      ? new Date(
+                          brgyAdmin.subscription_start
+                        ).toLocaleDateString()
+                      : "N/A"}
+                  </td>
+                  <td
+                    className={`px-4 py-2 ${
+                      brgyAdmin.subscription_end &&
+                      new Date(brgyAdmin.subscription_end) < new Date()
+                        ? "text-red-600 font-bold"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {brgyAdmin.subscription_end
+                      ? new Date(
+                          brgyAdmin.subscription_end
+                        ).toLocaleDateString()
+                      : "N/A"}
+                  </td>
                   <td
                     className={`px-4 py-2 font-semibold ${
                       brgyAdmin.user?.status === "ACTIVE"
@@ -332,12 +393,18 @@ export default function BrgyAdmins() {
                     >
                       ❌ Delete
                     </button>
-
                     <button
                       onClick={() => handleRestore(brgyAdmin)}
                       className="btn btn-success btn-sm mr-2"
                     >
                       🔃 Restore
+                    </button>
+                    <button
+                      onClick={() => handleExtendSubscription(brgyAdmin)}
+                      className="btn btn-warning btn-sm"
+                      title="Extend subscription by 1 month"
+                    >
+                      ⏳ Extend
                     </button>
                   </td>
                 </tr>
@@ -499,6 +566,33 @@ export default function BrgyAdmins() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {isExtendModalOpen && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">
+              Confirm Subscription Extension
+            </h3>
+            <p className="py-4">
+              Are you sure you want to extend{" "}
+              {brgyAdminToExtend?.brgy_admin_name}'s subscription by 1 month?
+            </p>
+            <div className="modal-action">
+              <button
+                className="btn btn-warning"
+                onClick={confirmExtendSubscription}
+              >
+                Yes, Extend
+              </button>
+              <button
+                className="btn"
+                onClick={() => setIsExtendModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
