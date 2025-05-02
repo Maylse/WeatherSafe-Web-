@@ -59,10 +59,7 @@ export default function Profile() {
       };
       reader.readAsDataURL(file);
       setImageFile(file);
-
-      if (formData.profile) {
-        handleDeleteImage(formData.profile);
-      }
+      // REMOVED the immediate deletion here
     }
   };
 
@@ -102,7 +99,15 @@ export default function Profile() {
     if (!publicId) return;
 
     try {
-      await axios.post(`${serverUrl}/api/delete-image`, { publicId });
+      await axios.post(
+        `${serverUrl}/api/delete-image`,
+        { publicId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
     } catch (error) {
       console.error("Failed to delete previous image:", error);
     }
@@ -120,6 +125,14 @@ export default function Profile() {
     try {
       // Upload new image if selected
       let updatedFormData = { ...formData };
+      let oldProfileImage = null;
+
+      // Track the old image URL before potentially replacing it
+      if (imageFile && formData.profile) {
+        oldProfileImage = formData.profile;
+      }
+
+      // Upload new image if selected
       if (imageFile) {
         const imageUrl = await handleImageUpload(imageFile);
         if (!imageUrl) throw new Error("Image upload failed");
@@ -163,6 +176,16 @@ export default function Profile() {
           },
         }
       );
+
+      // Only delete the old image after successful update
+      if (oldProfileImage) {
+        try {
+          await handleDeleteImage(oldProfileImage);
+        } catch (err) {
+          console.error("Failed to delete old image:", err);
+          // This shouldn't fail the whole operation
+        }
+      }
 
       // Update state on success
       setProfileData(response.data.user);

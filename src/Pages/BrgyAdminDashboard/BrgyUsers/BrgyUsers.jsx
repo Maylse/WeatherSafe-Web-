@@ -9,6 +9,8 @@ export default function BrgyUsers() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [brgyUserToDelete, setBrgyUserToDelete] = useState(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
@@ -125,7 +127,7 @@ export default function BrgyUsers() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    setIsSaving(true);
+    setIsSaving(true); // Show loading modal
     setErrors([]);
 
     try {
@@ -173,7 +175,7 @@ export default function BrgyUsers() {
         setErrors(["Something went wrong!"]);
       }
     } finally {
-      setIsSaving(false);
+      setIsSaving(false); // Hide loading modal
     }
   };
 
@@ -184,6 +186,7 @@ export default function BrgyUsers() {
 
   const confirmDelete = async () => {
     if (!brgyUserToDelete) return;
+    setIsDeleting(true); // Show loading modal
 
     try {
       await axios.delete(
@@ -199,11 +202,15 @@ export default function BrgyUsers() {
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error("Error deleting barangay user:", error);
+      setErrors(["Failed to delete barangay user"]);
+    } finally {
+      setIsDeleting(false); // Hide loading modal
     }
   };
 
   const confirmRestore = async () => {
     if (!brgyUserToRestore) return;
+    setIsRestoring(true); // Show loading modal
 
     try {
       await axios.patch(
@@ -220,9 +227,11 @@ export default function BrgyUsers() {
       setIsRestoreModalOpen(false);
     } catch (error) {
       console.error("Error restoring barangay user:", error);
+      setErrors(["Failed to restore barangay user"]);
+    } finally {
+      setIsRestoring(false); // Hide loading modal
     }
   };
-
   const handleRestore = (brgyUser) => {
     setBrgyUserToRestore(brgyUser);
     setIsRestoreModalOpen(true);
@@ -232,8 +241,36 @@ export default function BrgyUsers() {
     getBrgyUsers();
   }, []);
 
+  function LoadingModal({ isOpen, message }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white">
+              {message || "Processing, please wait..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
+      {/* Loading Modals */}
+      <LoadingModal
+        isOpen={isSaving}
+        message={
+          selectedBrgyUser
+            ? "Updating Barangay User..."
+            : "Creating Barangay User..."
+        }
+      />
+      <LoadingModal isOpen={isDeleting} message="Deleting Barangay User..." />
+      <LoadingModal isOpen={isRestoring} message="Restoring Barangay User..." />
       <h1 className="text-2xl font-bold mb-4 text-black">Barangay Users</h1>
       <button
         onClick={() => {
@@ -335,8 +372,12 @@ export default function BrgyUsers() {
       </table>
       {/* Add Edit Modal */}
       {isModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h2 className="text-xl font-semibold mb-4">
               {selectedBrgyUser ? "Edit Barangay User" : "Add Barangay User"}
             </h2>
@@ -423,7 +464,9 @@ export default function BrgyUsers() {
                   className="input input-bordered"
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                 />
               </div>
               {errors.password && (
@@ -438,7 +481,12 @@ export default function BrgyUsers() {
                   className="input input-bordered"
                   type="password"
                   value={formData.password_confirmation}
-                  onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      password_confirmation: e.target.value,
+                    })
+                  }
                 />
               </div>
 
@@ -455,7 +503,7 @@ export default function BrgyUsers() {
                   className="btn btn-primary"
                   disabled={loading}
                 >
-                  {loading ? "Saving..." : "Save Changes"}
+                  {loading ? "Saving..." : "Save"}
                 </button>
               </div>
             </form>
@@ -464,9 +512,15 @@ export default function BrgyUsers() {
       )}
 
       {isDeleteModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="text-lg font-semibold">Are you sure you want to delete this user?</h3>
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
+            <h3 className="text-lg font-semibold">
+              Are you sure you want to delete this user?
+            </h3>
             <div className="flex justify-end gap-4 mt-4">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
@@ -474,10 +528,7 @@ export default function BrgyUsers() {
               >
                 Cancel
               </button>
-              <button
-                onClick={confirmDelete}
-                className="btn btn-danger"
-              >
+              <button onClick={confirmDelete} className="btn btn-error">
                 Confirm
               </button>
             </div>
@@ -486,9 +537,15 @@ export default function BrgyUsers() {
       )}
 
       {isRestoreModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="text-lg font-semibold">Are you sure you want to restore this user?</h3>
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
+            <h3 className="text-lg font-semibold">
+              Are you sure you want to restore this user?
+            </h3>
             <div className="flex justify-end gap-4 mt-4">
               <button
                 onClick={() => setIsRestoreModalOpen(false)}
@@ -496,10 +553,7 @@ export default function BrgyUsers() {
               >
                 Cancel
               </button>
-              <button
-                onClick={confirmRestore}
-                className="btn btn-success"
-              >
+              <button onClick={confirmRestore} className="btn btn-success">
                 Confirm
               </button>
             </div>

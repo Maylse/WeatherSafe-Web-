@@ -6,6 +6,9 @@ import axios from "axios";
 const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function BrgyAdmins() {
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -16,7 +19,7 @@ export default function BrgyAdmins() {
   const [selectedBrgyAdmin, setSelectedBrgyAdmin] = useState(null);
   const { user, token } = useContext(AppContext);
   const [brgyAdmins, setBrgyAdmins] = useState([]);
-  const navigate = useNavigate();
+  const [barangays, setBarangays] = useState([]);
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [brgyAdminToExtend, setBrgyAdminToExtend] = useState(null);
   const [errors, setErrors] = useState([]);
@@ -46,6 +49,22 @@ export default function BrgyAdmins() {
       setErrors(["Failed to fetch Barangay Admins"]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Fetch barangays using Axios
+  async function getBarangays() {
+    try {
+      const response = await axios.get(`${serverUrl}/api/barangays`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setBarangays(response.data.barangays || []);
+      setErrors([]);
+    } catch (error) {
+      console.error("Error fetching barangays:", error);
+      setErrors(["Failed to fetch Barangays"]);
     }
   }
 
@@ -134,8 +153,9 @@ export default function BrgyAdmins() {
     setErrors([]);
 
     try {
-      // Handle image upload if new file was selected
       let updatedFormData = { ...formData };
+
+      // Handle image upload if new file was selected
       if (formData.profile instanceof File) {
         if (selectedBrgyAdmin?.user?.profile) {
           await handleDeleteImage(selectedBrgyAdmin.user.profile);
@@ -151,7 +171,8 @@ export default function BrgyAdmins() {
         ? `${serverUrl}/api/barangay-admins/${selectedBrgyAdmin.id}`
         : `${serverUrl}/api/barangay-admins`;
 
-      const response = await axios[method](endpoint, updatedFormData, {
+      // Make the API call
+      await axios[method](endpoint, updatedFormData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -190,6 +211,7 @@ export default function BrgyAdmins() {
   const confirmDelete = async () => {
     if (!brgyAdminToDelete) return;
 
+    setIsSaving(true); // Show loading modal
     try {
       await axios.delete(
         `${serverUrl}/api/barangay-admins/${brgyAdminToDelete.id}`,
@@ -204,12 +226,15 @@ export default function BrgyAdmins() {
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error("Error deleting barangay admin:", error);
+    } finally {
+      setIsSaving(false); // Hide loading modal
     }
   };
 
   const confirmRestore = async () => {
     if (!brgyAdminToRestore) return;
 
+    setIsSaving(true); // Show loading modal
     try {
       await axios.patch(
         `${serverUrl}/api/barangay-admins/${brgyAdminToRestore.id}/restore`,
@@ -225,6 +250,8 @@ export default function BrgyAdmins() {
       setIsRestoreModalOpen(false);
     } catch (error) {
       console.error("Error restoring barangay admin:", error);
+    } finally {
+      setIsSaving(false); // Hide loading modal
     }
   };
 
@@ -244,10 +271,13 @@ export default function BrgyAdmins() {
 
   const confirmExtendSubscription = async () => {
     if (!brgyAdminToExtend?.id) {
-      alert("No barangay admin selected for extension");
+      setModalMessage("No barangay admin selected for extension");
+      setIsError(true);
+      setIsMessageModalOpen(true);
       return;
     }
 
+    setIsSaving(true);
     try {
       const response = await axios.post(
         `${serverUrl}/api/barangay-admins/${brgyAdminToExtend.id}/extend-subscription`,
@@ -261,19 +291,96 @@ export default function BrgyAdmins() {
 
       await getBrgyAdmins();
       setIsExtendModalOpen(false);
-      alert(
-        `Subscription extended until ${response.data.new_subscription_end}`
+      setModalMessage(
+        `Subscription extended until ${new Date(
+          response.data.new_subscription_end
+        ).toLocaleDateString()}`
       );
+      setIsError(false);
+      setIsMessageModalOpen(true);
     } catch (error) {
       console.error("Error extending subscription:", error);
-      alert(error.response?.data?.message || "Failed to extend subscription");
+      setModalMessage(
+        error.response?.data?.message || "Failed to extend subscription"
+      );
+      setIsError(true);
+      setIsMessageModalOpen(true);
+    } finally {
+      setIsSaving(false);
     }
   };
   useEffect(() => {
     getBrgyAdmins();
+    getBarangays();
   }, []);
+
+  function LoadingModal({ isOpen, message }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white">
+              {message || "Processing, please wait..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function MessageModal({ isOpen, message, isError, onClose }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <h3
+            className={`text-lg font-bold mb-4 ${
+              isError ? "text-red-600" : "text-green-600"
+            }`}
+          >
+            {isError ? "Error" : "Success"}
+          </h3>
+          <p className="mb-4">{message}</p>
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className={`btn ${isError ? "btn-error" : "btn-success"}`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-6">
+      {/* Add the LoadingModal near the top of your component */}
+      <LoadingModal
+        isOpen={isSaving}
+        message={
+          isDeleteModalOpen
+            ? "Deleting Barangay Admin..."
+            : isRestoreModalOpen
+            ? "Restoring Barangay Admin..."
+            : isExtendModalOpen
+            ? "Extending Subscription..."
+            : selectedBrgyAdmin
+            ? "Updating Barangay Admin..."
+            : "Creating Barangay Admin..."
+        }
+      />
+      {/* Message Modal */}
+      <MessageModal
+        isOpen={isMessageModalOpen}
+        message={modalMessage}
+        isError={isError}
+        onClose={() => setIsMessageModalOpen(false)}
+      />
       <h1 className="text-2xl font-bold mb-4 text-black">Barangay Admins</h1>
       {/* Add New Barangay Admin Button */}
       <button
@@ -415,8 +522,12 @@ export default function BrgyAdmins() {
       </table>
 
       {isModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h2 className="text-xl font-semibold mb-4">
               {selectedBrgyAdmin ? "Edit Brgy Admin" : "Add Brgy Admin"}
             </h2>
@@ -503,14 +614,21 @@ export default function BrgyAdmins() {
                 <label className="label">
                   <span className="label-text">Barangay</span>
                 </label>
-                <input
-                  className="input input-bordered"
-                  type="text"
+                <select
+                  className="select select-bordered w-full"
                   value={formData.barangay}
                   onChange={(e) =>
                     setFormData({ ...formData, barangay: e.target.value })
                   }
-                />
+                  required
+                >
+                  <option value="">Select Barangay</option>
+                  {barangays.map((barangay) => (
+                    <option key={barangay.id} value={barangay.brgy_name}>
+                      {barangay.brgy_name}
+                    </option>
+                  ))}
+                </select>
               </div>
               {errors.barangay && (
                 <p className="text-error">{errors.barangay[0]}</p>
@@ -570,7 +688,11 @@ export default function BrgyAdmins() {
         </div>
       )}
       {isExtendModalOpen && (
-        <div className="modal modal-open">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
           <div className="modal-box">
             <h3 className="font-bold text-lg">
               Confirm Subscription Extension
@@ -599,7 +721,11 @@ export default function BrgyAdmins() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="modal modal-open">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
           <div className="modal-box">
             <h3 className="font-bold text-lg">Confirm Delete</h3>
             <p className="py-4">
@@ -623,7 +749,11 @@ export default function BrgyAdmins() {
 
       {/* Restore Confirmation Modal */}
       {isRestoreModalOpen && (
-        <div className="modal modal-open">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
           <div className="modal-box">
             <h3 className="font-bold text-lg">Confirm Restore</h3>
             <p className="py-4">

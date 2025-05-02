@@ -19,6 +19,7 @@ import axios from "axios";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
@@ -92,6 +93,8 @@ export default function Layout() {
 
   async function handleLogout(e) {
     e.preventDefault();
+    setIsLoggingOut(true); // Show loading modal
+
     try {
       await axios.post(
         `${serverUrl}/api/logout`,
@@ -109,6 +112,8 @@ export default function Layout() {
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
+    } finally {
+      setIsLoggingOut(false); // Hide loading modal
     }
   }
 
@@ -138,9 +143,27 @@ export default function Layout() {
   };
 
   const menuItems = getMenuItems();
+  function LoadingModal({ isOpen, message }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white">
+              {message || "Processing, please wait..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-base-100">
+      {/* Loading Modal */}
+      <LoadingModal isOpen={isLoggingOut} message="Logging out..." />
       {/* Header */}
       <header className="navbar bg-primary text-white shadow-md p-4 flex justify-between items-center">
         {/* Logo */}

@@ -6,6 +6,9 @@ import axios from "axios";
 const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 export default function CommunityUsers() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -55,6 +58,7 @@ export default function CommunityUsers() {
   const handleSave = async (e) => {
     e.preventDefault();
     setErrors([]);
+    setIsSaving(true); // Show loading modal
 
     try {
       const { email, password, password_confirmation } = formData;
@@ -94,6 +98,8 @@ export default function CommunityUsers() {
       } else {
         setErrors([error.message || "Something went wrong!"]);
       }
+    } finally {
+      setIsSaving(false); // Hide loading modal
     }
   };
 
@@ -114,6 +120,7 @@ export default function CommunityUsers() {
 
   const confirmDelete = async () => {
     if (!communityUserToDelete) return;
+    setIsDeleting(true); // Show loading modal
 
     try {
       await axios.delete(
@@ -128,11 +135,15 @@ export default function CommunityUsers() {
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error("Error deleting community user:", error);
+      setErrors(["Failed to delete community user"]);
+    } finally {
+      setIsDeleting(false); // Hide loading modal
     }
   };
 
   const confirmRestore = async () => {
     if (!communityUserToRestore) return;
+    setIsRestoring(true); // Show loading modal
 
     try {
       await axios.patch(
@@ -148,6 +159,9 @@ export default function CommunityUsers() {
       setIsRestoreModalOpen(false);
     } catch (error) {
       console.error("Error restoring community user:", error);
+      setErrors(["Failed to restore community user"]);
+    } finally {
+      setIsRestoring(false); // Hide loading modal
     }
   };
 
@@ -160,8 +174,32 @@ export default function CommunityUsers() {
     getCommunityUsers();
   }, []);
 
+  function LoadingModal({ isOpen, message }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white">
+              {message || "Processing, please wait..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
+      {/* Loading Modals */}
+      <LoadingModal isOpen={isSaving} message="Saving Community User..." />
+      <LoadingModal isOpen={isDeleting} message="Deleting Community User..." />
+      <LoadingModal
+        isOpen={isRestoring}
+        message="Restoring Community User..."
+      />
       <h1 className="text-2xl font-bold mb-4 text-black">Community Users</h1>
       {errors.length > 0 && (
         <div className="alert alert-error mb-4">
@@ -248,8 +286,12 @@ export default function CommunityUsers() {
       </table>
       {/* Edit Modal */}
       {isModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h2 className="text-xl font-semibold mb-4">Edit Community User</h2>
             <form onSubmit={handleSave}>
               <div className="form-control mb-4">
@@ -330,8 +372,12 @@ export default function CommunityUsers() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h3 className="font-bold text-lg">Confirm Delete</h3>
             <p className="py-4">
               Are you sure you want to delete{" "}
@@ -354,8 +400,12 @@ export default function CommunityUsers() {
 
       {/* Restore Confirmation Modal */}
       {isRestoreModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h3 className="font-bold text-lg">Confirm Restore</h3>
             <p className="py-4">
               Are you sure you want to restore{" "}

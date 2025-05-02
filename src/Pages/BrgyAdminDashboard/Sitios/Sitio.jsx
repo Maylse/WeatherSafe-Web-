@@ -11,6 +11,8 @@ const containerStyle = {
 };
 
 export default function Sitio() {
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSitio, setSelectedSitio] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -122,6 +124,7 @@ export default function Sitio() {
   const handleSave = async (e) => {
     e.preventDefault();
     setErrors([]);
+    setIsSaving(true); // Show loading modal
 
     if (!formData.sitio_name.trim() || !formData.long || !formData.lat) {
       setErrors(["Sitio name and coordinates cannot be empty."]);
@@ -131,7 +134,7 @@ export default function Sitio() {
     try {
       const method = selectedSitio ? "put" : "post";
       const endpoint = selectedSitio
-        ? `${serverUrl}}/api/brgySitios/${selectedSitio.id}`
+        ? `${serverUrl}/api/brgySitios/${selectedSitio.id}`
         : `${serverUrl}/api/brgySitios`;
 
       const response = await axios[method](endpoint, formData, {
@@ -162,6 +165,8 @@ export default function Sitio() {
       } else {
         setErrors(["Something went wrong!"]);
       }
+    } finally {
+      setIsSaving(false); // Hide loading modal
     }
   };
 
@@ -173,6 +178,7 @@ export default function Sitio() {
   // Delete sitio
   const confirmDelete = async () => {
     if (!sitioToDelete) return;
+    setIsDeleting(true); // Show loading modal
 
     try {
       await axios.delete(`${serverUrl}/api/brgySitios/${sitioToDelete.id}`, {
@@ -184,6 +190,8 @@ export default function Sitio() {
       setIsDeleteModalOpen(false);
     } catch (error) {
       console.error("Error deleting sitio:", error);
+    } finally {
+      setIsDeleting(false); // Hide loading modal
     }
   };
 
@@ -204,8 +212,32 @@ export default function Sitio() {
     getUserLocation();
   }, []);
 
+  function LoadingModal({ isOpen, message }) {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div className="modal-box p-6 rounded-lg shadow-lg max-w-sm w-full z-[101]">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-white">
+              {message || "Processing, please wait..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
+      {/* Loading Modals */}
+      <LoadingModal
+        isOpen={isSaving}
+        message={selectedSitio ? "Updating Sitio..." : "Creating Sitio..."}
+      />
+      <LoadingModal isOpen={isDeleting} message="Deleting Sitio..." />
+
       <h1 className="text-2xl font-bold mb-4">Sitios</h1>
 
       <button onClick={handleAddNewSitio} className="btn btn-primary mb-4">
@@ -257,8 +289,12 @@ export default function Sitio() {
       </div>
 
       {isModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-4xl">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h2 className="text-xl font-semibold mb-4">
               {selectedSitio ? "Edit Sitio" : "Add Sitio"}
             </h2>
@@ -359,8 +395,12 @@ export default function Sitio() {
       )}
 
       {isDeleteModalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
+        <div
+          className={`modal modal-open z-50 ${
+            isSaving ? "pointer-events-none" : ""
+          }`}
+        >
+          <div className="modal-box relative">
             <h3 className="font-bold text-lg">Confirm Delete</h3>
             <p className="py-4">
               Are you sure you want to delete {sitioToDelete?.sitio_name}?
