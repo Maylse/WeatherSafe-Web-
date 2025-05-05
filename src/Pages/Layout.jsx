@@ -16,6 +16,8 @@ import Sitio from "./BrgyAdminDashboard/Sitios/Sitio";
 const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 
 import axios from "axios";
+import Announcements from "./BrgyAdminDashboard/Announcements/Announcements";
+import Users from "./AppAdminDashboard/Users/Users";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -127,6 +129,7 @@ export default function Layout() {
         { label: "Barangay Admins", component: <BrgyAdmins /> },
         { label: "Barangays", component: <Barangays /> },
         { label: "Posts", component: <Posts /> },
+        { label: "Users", component: <Users /> },
       ];
     } else if (user?.userType === "barangay_admin") {
       return [
@@ -137,6 +140,7 @@ export default function Layout() {
         { label: "Barangay Users", component: <BarangayUsers /> },
         { label: "Community Users", component: <CommunityUsers /> },
         { label: "Sitios", component: <Sitio /> },
+        { label: "Announcements", component: <Announcements /> },
       ];
     }
     return [];
@@ -192,28 +196,39 @@ export default function Layout() {
 
           {/* Notifications Dropdown */}
           {showNotifications && (
-            <div className="absolute right-16 mt-2 w-64 bg-white shadow-lg rounded-lg p-4 z-50">
-              <h3 className="text-lg font-semibold text-black">
-                Notifications
-              </h3>
-              {notifications.length > 0 ? (
-                <ul className="mt-2 space-y-2  text-black">
-                  {notifications.map((notif, index) => (
-                    <li
-                      key={index}
-                      className={`p-2 rounded-md ${
-                        notif.is_read ? "bg-blue-100" : "bg-red-100"
-                      }`}
-                    >
-                      {notif.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-black-500 mt-2">
-                  No new notifications
-                </p>
-              )}
+            <div className="absolute right-16 mt-2 w-80 bg-white shadow-lg rounded-lg z-50">
+              <div className="p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-black">
+                  Notifications
+                </h3>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {" "}
+                {/* Added max height and scroll */}
+                {notifications.length > 0 ? (
+                  <ul className="divide-y divide-gray-200">
+                    {notifications.map((notif, index) => (
+                      <li
+                        key={index}
+                        className={`p-4 ${
+                          notif.is_read ? "bg-blue-50" : "bg-red-50"
+                        }`}
+                      >
+                        <p className="text-sm text-gray-800">{notif.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notif.created_at).toLocaleString()}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="p-4 text-center">
+                    <p className="text-sm text-gray-500">
+                      No new notifications
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
