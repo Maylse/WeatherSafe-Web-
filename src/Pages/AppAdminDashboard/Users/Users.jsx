@@ -389,7 +389,6 @@ export default function Users() {
           </div>
         </div>
       )}
-      // Update your LoadingModal to handle delete loading state
       <LoadingModal
         isOpen={(editModalOpen && loading) || deleteLoading}
         message={deleteLoading ? "Deleting user..." : "Updating user..."}
