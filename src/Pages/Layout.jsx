@@ -18,6 +18,7 @@ const serverUrl = import.meta.env.VITE_APP_SERVER_URL;
 import axios from "axios";
 import Announcements from "./BrgyAdminDashboard/Announcements/Announcements";
 import Users from "./AppAdminDashboard/Users/Users";
+import ReportedFakeSOS from "./BrgyAdminDashboard/ReportedFakeSOS/ReportedFakeSOS";
 
 export default function Layout() {
   const { user, token, setUser, setToken } = useContext(AppContext);
@@ -141,6 +142,7 @@ export default function Layout() {
         { label: "Community Users", component: <CommunityUsers /> },
         { label: "Sitios", component: <Sitio /> },
         { label: "Announcements", component: <Announcements /> },
+         { label: "Fake Reports", component: <ReportedFakeSOS /> },
       ];
     }
     return [];
