@@ -102,12 +102,14 @@ export default function ReportedFakeSOS() {
             <div>
               <div className="stat">
                 <div className="stat-title">Status</div>
-                <div className={`stat-value ${
-                  selectedSOS?.sos_data?.status === "PENDING" 
+               <div className={`stat-value ${
+                selectedSOS?.sos_data?.status === "PENDING" 
                     ? "text-warning" 
+                    : selectedSOS?.sos_data?.status === "REPORTED"
+                    ? "text-error"
                     : "text-success"
                 }`}>
-                  {selectedSOS?.sos_data?.status}
+                {selectedSOS?.sos_data?.status}
                 </div>
               </div>
               
